@@ -100,6 +100,13 @@ var Error = class extends Result {
     return false;
   }
 };
+function divideFloat(a, b) {
+  if (b === 0) {
+    return 0;
+  } else {
+    return a / b;
+  }
+}
 function makeError(variant, file, module, line, fn, message, extra) {
   let error = new globalThis.Error(message);
   error.gleam_error = variant;
@@ -112,6 +119,14 @@ function makeError(variant, file, module, line, fn, message, extra) {
   return error;
 }
 
+// build/dev/javascript/gleam_stdlib/gleam/order.mjs
+var Lt = class extends CustomType {
+};
+var Eq = class extends CustomType {
+};
+var Gt = class extends CustomType {
+};
+
 // build/dev/javascript/gleam_stdlib/gleam/option.mjs
 var None = class extends CustomType {
 };
@@ -122,14 +137,6 @@ var BUCKET_SIZE = Math.pow(2, SHIFT);
 var MASK = BUCKET_SIZE - 1;
 var MAX_INDEX_NODE = BUCKET_SIZE / 2;
 var MIN_ARRAY_NODE = BUCKET_SIZE / 4;
-
-// build/dev/javascript/gleam_stdlib/gleam/order.mjs
-var Lt = class extends CustomType {
-};
-var Eq = class extends CustomType {
-};
-var Gt = class extends CustomType {
-};
 
 // build/dev/javascript/gleam_stdlib/gleam/list.mjs
 var Ascending = class extends CustomType {
@@ -602,6 +609,32 @@ var trim_start_regex = /* @__PURE__ */ new RegExp(
   `^[${unicode_whitespaces}]*`
 );
 var trim_end_regex = /* @__PURE__ */ new RegExp(`[${unicode_whitespaces}]*$`);
+function float_to_string(float2) {
+  const string5 = float2.toString().replace("+", "");
+  if (string5.indexOf(".") >= 0) {
+    return string5;
+  } else {
+    const index2 = string5.indexOf("e");
+    if (index2 >= 0) {
+      return string5.slice(0, index2) + ".0" + string5.slice(index2);
+    } else {
+      return string5 + ".0";
+    }
+  }
+}
+
+// build/dev/javascript/gleam_stdlib/gleam/float.mjs
+function divide(a, b) {
+  if (b === 0) {
+    return new Error(void 0);
+  } else {
+    let b$1 = b;
+    return new Ok(divideFloat(a, b$1));
+  }
+}
+function subtract(a, b) {
+  return a - b;
+}
 
 // build/dev/javascript/gleam_stdlib/gleam/bool.mjs
 function guard(requirement, consequence, alternative) {
@@ -834,8 +867,12 @@ var empty = /* @__PURE__ */ new Effect(
   /* @__PURE__ */ toList([]),
   /* @__PURE__ */ toList([])
 );
-function none() {
-  return empty;
+function from(effect) {
+  let task = (actions) => {
+    let dispatch = actions.dispatch;
+    return effect(dispatch);
+  };
+  return new Effect(toList([task]), empty.before_paint, empty.after_paint);
 }
 
 // build/dev/javascript/lustre/lustre/internals/mutable_map.ffi.mjs
@@ -1404,13 +1441,19 @@ function element2(tag, attributes, children) {
 function text2(content) {
   return text("", identity2, content);
 }
-function none2() {
+function none() {
   return text("", identity2, "");
 }
 
 // build/dev/javascript/lustre/lustre/element/html.mjs
+function text3(content) {
+  return text2(content);
+}
 function div(attrs, children) {
   return element2("div", attrs, children);
+}
+function p(attrs, children) {
+  return element2("p", attrs, children);
 }
 function canvas(attrs) {
   return element2("canvas", attrs, empty_list);
@@ -2989,7 +3032,7 @@ var virtualise = (root3) => {
     const placeholder = document().createTextNode("");
     insertMetadataChild(text_kind, rootMeta, placeholder, 0, null);
     root3.replaceChildren(placeholder);
-    return none2();
+    return none();
   }
   if (virtualisableRootChildren === 1) {
     const children2 = virtualiseChildNodes(rootMeta, root3);
@@ -3391,18 +3434,94 @@ function start3(app, selector, start_args) {
   );
 }
 
+// build/dev/javascript/space_invaders/engine_ffi.mjs
+function request_animation_frame(callback) {
+  window.requestAnimationFrame(callback);
+}
+
 // build/dev/javascript/space_invaders/space_invaders.mjs
 var FILEPATH = "src/space_invaders.gleam";
 var Idle = class extends CustomType {
 };
+var Ready = class extends CustomType {
+  constructor(previous_time, fps) {
+    super();
+    this.previous_time = previous_time;
+    this.fps = fps;
+  }
+};
+var Tick = class extends CustomType {
+  constructor(time) {
+    super();
+    this.time = time;
+  }
+};
+function calc_frame_time(model, current_time) {
+  if (model instanceof Ready) {
+    let previous_time = model.previous_time;
+    return subtract(current_time, previous_time);
+  } else {
+    return 0;
+  }
+}
+function schedule_next_frame() {
+  return from(
+    (dispatch) => {
+      return request_animation_frame(
+        (timestamp) => {
+          return dispatch(new Tick(timestamp));
+        }
+      );
+    }
+  );
+}
 function init(_) {
-  return [new Idle(), none()];
+  return [new Idle(), schedule_next_frame()];
 }
 function update2(model, msg) {
-  return [model, none()];
+  let current_time = msg.time;
+  let frame_time = calc_frame_time(model, current_time);
+  let _block;
+  let $ = divide(1e3, frame_time);
+  if ($ instanceof Ok) {
+    let fps2 = $[0];
+    _block = fps2;
+  } else {
+    _block = 60;
+  }
+  let fps = _block;
+  return [new Ready(current_time, fps), schedule_next_frame()];
+}
+function render_debugger(model) {
+  if (model instanceof Idle) {
+    return p(toList([]), toList([text3("Initializing")]));
+  } else {
+    let previous_time = model.previous_time;
+    let fps = model.fps;
+    return p(
+      toList([]),
+      toList([
+        (() => {
+          let _pipe = float_to_string(previous_time);
+          return text3(_pipe);
+        })(),
+        text3(" \u2022 "),
+        (() => {
+          let _pipe = float_to_string(fps);
+          return text3(_pipe);
+        })()
+      ])
+    );
+  }
 }
 function view(model) {
-  return div(toList([]), toList([canvas(toList([]))]));
+  return div(
+    toList([]),
+    toList([
+      canvas(toList([])),
+      div(toList([]), toList([render_debugger(model)]))
+    ])
+  );
 }
 function main() {
   let app = application(init, update2, view);
@@ -3412,10 +3531,10 @@ function main() {
       "let_assert",
       FILEPATH,
       "space_invaders",
-      10,
+      12,
       "main",
       "Pattern match failed, no pattern matched the value.",
-      { value: $, start: 265, end: 314, pattern_start: 276, pattern_end: 281 }
+      { value: $, start: 298, end: 347, pattern_start: 309, pattern_end: 314 }
     );
   }
   return void 0;
