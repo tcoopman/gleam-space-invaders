@@ -1,9 +1,16 @@
 import engine
 import gleam/float
+import gleam/int
+import gleam/list
+import gleam_community/colour
 import lustre
+import lustre/attribute
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
+import paint as p
+import paint/canvas
+import paint/encode
 
 // MAIN ------------------------------------------------------------------------
 
@@ -59,10 +66,51 @@ fn schedule_next_frame() {
   })
 }
 
-// VIEW ------------------------------------------------------------------------
+const size = 800
 
+pub fn space_ship() -> p.Picture {
+  let assert Ok(semi_transparent) = colour.from_rgba_hex_string("#00CCC00FF")
+  let assert Ok(transparent) = colour.from_rgba(1.0, 1.0, 1.0, 0.0)
+
+  let side = 14.0
+  p.combine([
+    p.rectangle(side *. 5.0, side)
+      |> p.translate_x(0.0)
+      |> p.translate_y(side *. 2.0),
+
+    p.rectangle(side *. 3.0, side)
+      |> p.translate_x(side)
+      |> p.translate_y(side),
+    p.rectangle(side, side)
+      |> p.translate_x(side *. 2.0)
+      |> p.translate_y(0.0),
+  ])
+  |> p.fill(semi_transparent)
+  |> p.stroke(transparent, width: 0.0)
+}
+
+fn canvas(picture: p.Picture, attributes: List(attribute.Attribute(a))) {
+  element.element(
+    "paint-canvas",
+    [attribute.attribute("picture", encode.to_string(picture)), ..attributes],
+    [],
+  )
+}
+
+// VIEW ------------------------------------------------------------------------
+// 
+// 
 fn view(model: Model) -> Element(Msg) {
-  html.div([], [html.canvas([]), html.div([], [render_debugger(model)])])
+  canvas.define_web_component()
+  html.div([], [
+    canvas(space_ship(), [
+      attribute.height(size),
+      attribute.width(size),
+      attribute.style("background", "black"),
+      attribute.style("line-height", "0"),
+    ]),
+    html.div([], [render_debugger(model)]),
+  ])
 }
 
 fn render_debugger(model: Model) {
