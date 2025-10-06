@@ -1,7 +1,6 @@
 import engine
 import gleam/float
 import gleam/int
-import gleam/list
 import gleam_community/colour
 import lustre
 import lustre/attribute
@@ -13,8 +12,10 @@ import paint/canvas
 import paint/encode
 
 // MAIN ------------------------------------------------------------------------
+const max = 40.0
 
 pub fn main() {
+  canvas.define_web_component()
   let app = lustre.application(init, update, view)
   let assert Ok(_) = lustre.start(app, "#app", Nil)
 
@@ -22,10 +23,9 @@ pub fn main() {
 }
 
 // MODEL -----------------------------------------------------------------------
-
 type Model {
   Idle
-  Ready(previous_time: Float, fps: Float)
+  Ready(previous_time: Float, fps: Float, x: Float)
 }
 
 fn init(_) -> #(Model, Effect(Msg)) {
@@ -48,7 +48,10 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
         Ok(fps) -> fps
         _ -> 60.0
       }
-      #(Ready(previous_time: current_time, fps: fps), schedule_next_frame())
+      #(
+        Ready(previous_time: current_time, fps: fps, x: max),
+        schedule_next_frame(),
+      )
     }
   }
 }
@@ -68,11 +71,9 @@ fn schedule_next_frame() {
 
 const size = 800
 
-pub fn space_ship() -> p.Picture {
-  let assert Ok(semi_transparent) = colour.from_rgba_hex_string("#00CCC00FF")
-  let assert Ok(transparent) = colour.from_rgba(1.0, 1.0, 1.0, 0.0)
+pub fn space_ship(side) -> p.Picture {
+  let assert Ok(green) = colour.from_rgba_hex_string("#00CCC00FF")
 
-  let side = 14.0
   p.combine([
     p.rectangle(side *. 5.0, side)
       |> p.translate_x(0.0)
@@ -85,8 +86,8 @@ pub fn space_ship() -> p.Picture {
       |> p.translate_x(side *. 2.0)
       |> p.translate_y(0.0),
   ])
-  |> p.fill(semi_transparent)
-  |> p.stroke(transparent, width: 0.0)
+  |> p.fill(green)
+  |> p.stroke(green, width: 0.0)
 }
 
 fn canvas(picture: p.Picture, attributes: List(attribute.Attribute(a))) {
@@ -97,28 +98,48 @@ fn canvas(picture: p.Picture, attributes: List(attribute.Attribute(a))) {
   )
 }
 
+// const scale = 100.0
+
+fn game(x: Float) -> p.Picture {
+  let size = int.to_float(size)
+  let steps = max +. 5.0
+  let side_size = size /. steps
+
+  let ship = space_ship(side_size)
+  let position = x *. side_size
+
+  ship
+  |> p.translate_xy(position, size -. side_size *. 3.0)
+}
+
 // VIEW ------------------------------------------------------------------------
 // 
 // 
 fn view(model: Model) -> Element(Msg) {
-  canvas.define_web_component()
-  html.div([], [
-    canvas(space_ship(), [
-      attribute.height(size),
-      attribute.width(size),
-      attribute.style("background", "black"),
-      attribute.style("line-height", "0"),
-    ]),
-    html.div([], [render_debugger(model)]),
-  ])
+  case model {
+    Idle -> html.p([], [html.text("Initializing")])
+    Ready(_previous_time, _fps, x) -> {
+      html.div([], [
+        canvas(game(x), [
+          attribute.height(size),
+          attribute.width(size),
+          attribute.style("background", "black"),
+          attribute.style("line-height", "0"),
+        ]),
+        html.div([], [render_debugger(model)]),
+      ])
+    }
+  }
 }
 
 fn render_debugger(model: Model) {
   case model {
     Idle -> html.p([], [html.text("Initializing")])
-    Ready(previous_time, fps) -> {
+    Ready(previous_time, fps, x) -> {
       html.p([], [
         float.to_string(previous_time) |> html.text,
+        html.text(" • x:"),
+        float.to_string(x) |> html.text,
         html.text(" • "),
         float.to_string(fps) |> html.text,
       ])
