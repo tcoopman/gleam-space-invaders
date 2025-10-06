@@ -1,4 +1,6 @@
 import engine
+import gleam/dynamic.{type Dynamic}
+import gleam/dynamic/decode
 import gleam/float
 import gleam/int
 import gleam_community/colour
@@ -7,9 +9,13 @@ import lustre/attribute
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
+import lustre/event
 import paint as p
 import paint/canvas
 import paint/encode
+
+@external(javascript, "./app.ffi.mjs", "addGlobalEventListener")
+fn add_event_listener(name: String, handler: fn(Dynamic) -> any) -> Nil
 
 // MAIN ------------------------------------------------------------------------
 const max = 40.0
@@ -17,7 +23,17 @@ const max = 40.0
 pub fn main() {
   canvas.define_web_component()
   let app = lustre.application(init, update, view)
-  let assert Ok(_) = lustre.start(app, "#app", Nil)
+  let assert Ok(runtime) = lustre.start(app, "#app", Nil)
+  add_event_listener("keypress", fn(e) {
+    let decoder = {
+      use key <- decode.field("key", decode.string)
+      key |> decode.success
+    }
+    let result = decode.run(e, decoder)
+    let assert Ok(value) = result
+    lustre.dispatch(UserPressedKey(value))
+    |> lustre.send(runtime, _)
+  })
 
   Nil
 }
@@ -36,6 +52,7 @@ fn init(_) -> #(Model, Effect(Msg)) {
 
 type Msg {
   Tick(time: Float)
+  UserPressedKey(key: String)
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
@@ -52,6 +69,10 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
         Ready(previous_time: current_time, fps: fps, x: max),
         schedule_next_frame(),
       )
+    }
+    UserPressedKey(key) -> {
+      echo key
+      #(model, schedule_next_frame())
     }
   }
 }
