@@ -43,7 +43,7 @@ pub fn main() {
 // MODEL -----------------------------------------------------------------------
 type Model {
   Idle
-  Ready(previous_time: Float, fps: Float, x: Float, game: game.State)
+  Ready(previous_time: Float, fps: Float, game: game.State)
 }
 
 fn init(_) -> #(Model, Effect(Msg)) {
@@ -64,7 +64,7 @@ fn update_game(model: Model, cmd: game.Command) -> Model {
 
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   let model = case model {
-    Idle -> Ready(0.0, 0.0, 0.0, game.create_game())
+    Idle -> Ready(0.0, 0.0, game.create_game())
     _ -> model
   }
   let assert Ready(..) = model
@@ -78,8 +78,10 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
         Ok(fps) -> fps
         _ -> 60.0
       }
+      let model = update_game(model, game.Tick)
+      let assert Ready(..) = model
       #(
-        Ready(..model, previous_time: current_time, fps: fps, x: max),
+        Ready(..model, previous_time: current_time, fps: fps),
         schedule_next_frame(),
       )
     }
@@ -87,6 +89,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       case key {
         "a" -> #(update_game(model, game.MoveLeft), effect.none())
         "d" -> #(update_game(model, game.MoveRight), effect.none())
+        "s" -> #(update_game(model, game.Shoot), effect.none())
         _ -> #(model, effect.none())
       }
     }
@@ -143,11 +146,32 @@ fn render_game(game: game.State) -> p.Picture {
   let side_size = size /. steps
 
   let ship = space_ship(side_size)
-  let game.Playing(spaceship: game.Spaceship(position:, ..)) = game
-  let position = int.to_float(position) *. side_size
+  let game.Playing(spaceship: game.Spaceship(position:, bullets:, ..), ..) =
+    game
 
-  ship
-  |> p.translate_xy(position, size -. side_size *. 3.0)
+  let red = colour.light_red
+  let spaceship_position = int.to_float(position) *. side_size
+  let rendered_bullets = case bullets {
+    [] -> []
+    [game.Position(x, y)] -> {
+      let bullet_x = int.to_float(x) *. side_size
+      let bullet_y = size -. int.to_float(y) *. side_size
+      echo #(y, bullet_y)
+      [
+        p.rectangle(side_size, 30.0)
+        |> p.fill(red)
+        |> p.translate_x(bullet_x +. 2.0 *. side_size)
+        |> p.translate_y(bullet_y),
+      ]
+    }
+    _ -> todo
+  }
+
+  p.combine([
+    ship
+      |> p.translate_xy(spaceship_position, size -. side_size *. 3.0),
+    ..rendered_bullets
+  ])
 }
 
 // VIEW ------------------------------------------------------------------------
@@ -156,7 +180,7 @@ fn render_game(game: game.State) -> p.Picture {
 fn view(model: Model) -> Element(Msg) {
   case model {
     Idle -> html.p([], [html.text("Initializing")])
-    Ready(_previous_time, _fps, x, game) -> {
+    Ready(_previous_time, _fps, game) -> {
       html.div([], [
         canvas(render_game(game), [
           attribute.height(size),
@@ -164,7 +188,7 @@ fn view(model: Model) -> Element(Msg) {
           attribute.style("background", "black"),
           attribute.style("line-height", "0"),
         ]),
-        html.div([], [render_debugger(model)]),
+        // html.div([], [render_debugger(model)]),
       ])
     }
   }
@@ -173,11 +197,9 @@ fn view(model: Model) -> Element(Msg) {
 fn render_debugger(model: Model) {
   case model {
     Idle -> html.p([], [html.text("Initializing")])
-    Ready(previous_time, fps, x, ..) -> {
+    Ready(previous_time, fps, ..) -> {
       html.p([], [
         float.to_string(previous_time) |> html.text,
-        html.text(" • x:"),
-        float.to_string(x) |> html.text,
         html.text(" • "),
         float.to_string(fps) |> html.text,
       ])

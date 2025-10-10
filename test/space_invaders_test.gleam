@@ -43,22 +43,22 @@ pub fn move_right_against_boundaries_stops_spaceship_test() {
 
 pub fn when_shooting_the_bullet_has_the_spaceship_position_test() {
   let state = game.create_game() |> game.apply(Shoot, _)
-  let assert Playing(Spaceship(bullets: [position], ..)) = state
+  let assert Playing(spaceship: Spaceship(bullets: [position], ..), ..) = state
   assert Position(50, 5) == position
 }
 
 pub fn bullet_moves_forward_after_tick_test() {
   let state = game.create_game() |> game.apply(Shoot, _) |> game.apply(Tick, _)
-  let assert Playing(Spaceship(bullets: [position], ..)) = state
+  let assert Playing(spaceship: Spaceship(bullets: [position], ..), ..) = state
   assert Position(50, 5 + 1) == position
 }
 
 fn spaceship_position(state) {
-  let Playing(Spaceship(position:, ..)) = state
+  let Playing(spaceship: Spaceship(position:, ..), ..) = state
   position
 }
 
 fn spaceship_on_position(state, position) {
-  let Playing(spaceship) = state
+  let Playing(spaceship:, ..) = state
   Playing(..state, spaceship: Spaceship(..spaceship, position:))
 }
