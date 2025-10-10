@@ -299,10 +299,10 @@ var Error = class extends Result {
   }
 };
 function isEqual(x, y) {
-  let values3 = [x, y];
-  while (values3.length) {
-    let a = values3.pop();
-    let b = values3.pop();
+  let values2 = [x, y];
+  while (values2.length) {
+    let a = values2.pop();
+    let b = values2.pop();
     if (a === b) continue;
     if (!isObject(a) || !isObject(b)) return false;
     let unequal = !structurallyCompatibleObjects(a, b) || unequalDates(a, b) || unequalBuffers(a, b) || unequalArrays(a, b) || unequalMaps(a, b) || unequalSets(a, b) || unequalRegExps(a, b);
@@ -320,7 +320,7 @@ function isEqual(x, y) {
     const kb = keys2(b);
     if (ka.length !== kb.length) return false;
     for (let k of ka) {
-      values3.push(get2(a, k), get2(b, k));
+      values2.push(get2(a, k), get2(b, k));
     }
   }
   return true;
@@ -2937,25 +2937,25 @@ function from(effect) {
 function empty2() {
   return null;
 }
-function get(map4, key) {
-  const value = map4?.get(key);
+function get(map3, key) {
+  const value = map3?.get(key);
   if (value != null) {
     return new Ok(value);
   } else {
     return new Error(void 0);
   }
 }
-function has_key2(map4, key) {
-  return map4 && map4.has(key);
+function has_key2(map3, key) {
+  return map3 && map3.has(key);
 }
-function insert2(map4, key, value) {
-  map4 ??= /* @__PURE__ */ new Map();
-  map4.set(key, value);
-  return map4;
+function insert2(map3, key, value) {
+  map3 ??= /* @__PURE__ */ new Map();
+  map3.set(key, value);
+  return map3;
 }
-function remove(map4, key) {
-  map4?.delete(key);
-  return map4;
+function remove(map3, key) {
+  map3?.delete(key);
+  return map3;
 }
 
 // build/dev/javascript/lustre/lustre/vdom/path.mjs
@@ -3041,8 +3041,8 @@ function matches(path, candidates) {
   }
 }
 var separator_event = "\n";
-function event(path, event4) {
-  return do_to_string(path, toList([separator_event, event4]));
+function event(path, event2) {
+  return do_to_string(path, toList([separator_event, event2]));
 }
 
 // build/dev/javascript/lustre/lustre/vdom/vnode.mjs
@@ -3293,7 +3293,7 @@ function remove_attributes(handlers, path, attributes) {
     }
   );
 }
-function handle(events, path, name, event4) {
+function handle(events, path, name, event2) {
   let next_dispatched_paths = prepend(path, events.next_dispatched_paths);
   let events$1 = new Events(
     events.handlers,
@@ -3306,7 +3306,7 @@ function handle(events, path, name, event4) {
   );
   if ($ instanceof Ok) {
     let handler = $[0];
-    return [events$1, run(event4, handler)];
+    return [events$1, run(event2, handler)];
   } else {
     return [events$1, new Error(toList([]))];
   }
@@ -3643,10 +3643,10 @@ function diff_attributes(loop$controlled, loop$path, loop$mapper, loop$events, l
     let mapper = loop$mapper;
     let events = loop$events;
     let old = loop$old;
-    let new$8 = loop$new;
+    let new$7 = loop$new;
     let added = loop$added;
     let removed = loop$removed;
-    if (new$8 instanceof Empty) {
+    if (new$7 instanceof Empty) {
       if (old instanceof Empty) {
         return new AttributeChange(added, removed, events);
       } else {
@@ -3662,7 +3662,7 @@ function diff_attributes(loop$controlled, loop$path, loop$mapper, loop$events, l
           loop$mapper = mapper;
           loop$events = events$1;
           loop$old = old$1;
-          loop$new = new$8;
+          loop$new = new$7;
           loop$added = added;
           loop$removed = removed$1;
         } else {
@@ -3674,16 +3674,16 @@ function diff_attributes(loop$controlled, loop$path, loop$mapper, loop$events, l
           loop$mapper = mapper;
           loop$events = events;
           loop$old = old$1;
-          loop$new = new$8;
+          loop$new = new$7;
           loop$added = added;
           loop$removed = removed$1;
         }
       }
     } else if (old instanceof Empty) {
-      let $ = new$8.head;
+      let $ = new$7.head;
       if ($ instanceof Event2) {
         let next = $;
-        let new$1 = new$8.tail;
+        let new$1 = new$7.tail;
         let name = $.name;
         let handler = $.handler;
         let added$1 = prepend(next, added);
@@ -3698,7 +3698,7 @@ function diff_attributes(loop$controlled, loop$path, loop$mapper, loop$events, l
         loop$removed = removed;
       } else {
         let next = $;
-        let new$1 = new$8.tail;
+        let new$1 = new$7.tail;
         let added$1 = prepend(next, added);
         loop$controlled = controlled;
         loop$path = path;
@@ -3710,8 +3710,8 @@ function diff_attributes(loop$controlled, loop$path, loop$mapper, loop$events, l
         loop$removed = removed;
       }
     } else {
-      let next = new$8.head;
-      let remaining_new = new$8.tail;
+      let next = new$7.head;
+      let remaining_new = new$7.tail;
       let prev = old.head;
       let remaining_old = old.tail;
       let $ = compare3(prev, next);
@@ -3725,7 +3725,7 @@ function diff_attributes(loop$controlled, loop$path, loop$mapper, loop$events, l
           loop$mapper = mapper;
           loop$events = events$1;
           loop$old = remaining_old;
-          loop$new = new$8;
+          loop$new = new$7;
           loop$added = added;
           loop$removed = removed$1;
         } else {
@@ -3735,7 +3735,7 @@ function diff_attributes(loop$controlled, loop$path, loop$mapper, loop$events, l
           loop$mapper = mapper;
           loop$events = events;
           loop$old = remaining_old;
-          loop$new = new$8;
+          loop$new = new$7;
           loop$added = added;
           loop$removed = removed$1;
         }
@@ -3927,7 +3927,7 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
   while (true) {
     let old = loop$old;
     let old_keyed = loop$old_keyed;
-    let new$8 = loop$new;
+    let new$7 = loop$new;
     let new_keyed = loop$new_keyed;
     let moved = loop$moved;
     let moved_offset = loop$moved_offset;
@@ -3939,7 +3939,7 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
     let children = loop$children;
     let mapper = loop$mapper;
     let events = loop$events;
-    if (new$8 instanceof Empty) {
+    if (new$7 instanceof Empty) {
       if (old instanceof Empty) {
         return new Diff(
           new Patch(patch_index, removed, changes, children),
@@ -3959,7 +3959,7 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
         let events$1 = remove_child(events, path, node_index, prev);
         loop$old = old$1;
         loop$old_keyed = old_keyed;
-        loop$new = new$8;
+        loop$new = new$7;
         loop$new_keyed = new_keyed;
         loop$moved = moved;
         loop$moved_offset = moved_offset;
@@ -3978,19 +3978,19 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
         mapper,
         path,
         node_index,
-        new$8
+        new$7
       );
-      let insert4 = insert3(new$8, node_index - moved_offset);
+      let insert4 = insert3(new$7, node_index - moved_offset);
       let changes$1 = prepend(insert4, changes);
       return new Diff(
         new Patch(patch_index, removed, changes$1, children),
         events$1
       );
     } else {
-      let next = new$8.head;
+      let next = new$7.head;
       let prev = old.head;
       if (prev.key !== next.key) {
-        let new_remaining = new$8.tail;
+        let new_remaining = new$7.tail;
         let old_remaining = old.tail;
         let next_did_exist = get(old_keyed, next.key);
         let prev_does_exist = has_key2(new_keyed, prev.key);
@@ -4001,7 +4001,7 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
             if ($) {
               loop$old = old_remaining;
               loop$old_keyed = old_keyed;
-              loop$new = new$8;
+              loop$new = new$7;
               loop$new_keyed = new_keyed;
               loop$moved = moved;
               loop$moved_offset = moved_offset - 1;
@@ -4023,7 +4023,7 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
               let moved_offset$1 = moved_offset + 1;
               loop$old = prepend(match, old);
               loop$old_keyed = old_keyed;
-              loop$new = new$8;
+              loop$new = new$7;
               loop$new_keyed = new_keyed;
               loop$moved = moved$1;
               loop$moved_offset = moved_offset$1;
@@ -4043,7 +4043,7 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
             let moved_offset$1 = moved_offset - 1;
             loop$old = old_remaining;
             loop$old_keyed = old_keyed;
-            loop$new = new$8;
+            loop$new = new$7;
             loop$new_keyed = new_keyed;
             loop$moved = moved;
             loop$moved_offset = moved_offset$1;
@@ -4106,10 +4106,10 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
       } else {
         let $ = old.head;
         if ($ instanceof Fragment) {
-          let $1 = new$8.head;
+          let $1 = new$7.head;
           if ($1 instanceof Fragment) {
             let next$1 = $1;
-            let new$1 = new$8.tail;
+            let new$1 = new$7.tail;
             let prev$1 = $;
             let old$1 = old.tail;
             let composed_mapper = compose_mapper(mapper, next$1.mapper);
@@ -4165,7 +4165,7 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
             loop$events = child.events;
           } else {
             let next$1 = $1;
-            let new_remaining = new$8.tail;
+            let new_remaining = new$7.tail;
             let prev$1 = $;
             let old_remaining = old.tail;
             let change = replace2(node_index - moved_offset, next$1);
@@ -4196,12 +4196,12 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
             loop$events = events$1;
           }
         } else if ($ instanceof Element) {
-          let $1 = new$8.head;
+          let $1 = new$7.head;
           if ($1 instanceof Element) {
             let next$1 = $1;
             let prev$1 = $;
             if (prev$1.namespace === next$1.namespace && prev$1.tag === next$1.tag) {
-              let new$1 = new$8.tail;
+              let new$1 = new$7.tail;
               let old$1 = old.tail;
               let composed_mapper = compose_mapper(
                 mapper,
@@ -4288,7 +4288,7 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
               loop$events = child.events;
             } else {
               let next$2 = $1;
-              let new_remaining = new$8.tail;
+              let new_remaining = new$7.tail;
               let prev$2 = $;
               let old_remaining = old.tail;
               let change = replace2(node_index - moved_offset, next$2);
@@ -4325,7 +4325,7 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
             }
           } else {
             let next$1 = $1;
-            let new_remaining = new$8.tail;
+            let new_remaining = new$7.tail;
             let prev$1 = $;
             let old_remaining = old.tail;
             let change = replace2(node_index - moved_offset, next$1);
@@ -4356,12 +4356,12 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
             loop$events = events$1;
           }
         } else if ($ instanceof Text) {
-          let $1 = new$8.head;
+          let $1 = new$7.head;
           if ($1 instanceof Text) {
             let next$1 = $1;
             let prev$1 = $;
             if (prev$1.content === next$1.content) {
-              let new$1 = new$8.tail;
+              let new$1 = new$7.tail;
               let old$1 = old.tail;
               loop$old = old$1;
               loop$old_keyed = old_keyed;
@@ -4379,7 +4379,7 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
               loop$events = events;
             } else {
               let next$2 = $1;
-              let new$1 = new$8.tail;
+              let new$1 = new$7.tail;
               let old$1 = old.tail;
               let child = new$5(
                 node_index,
@@ -4404,7 +4404,7 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
             }
           } else {
             let next$1 = $1;
-            let new_remaining = new$8.tail;
+            let new_remaining = new$7.tail;
             let prev$1 = $;
             let old_remaining = old.tail;
             let change = replace2(node_index - moved_offset, next$1);
@@ -4435,10 +4435,10 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
             loop$events = events$1;
           }
         } else {
-          let $1 = new$8.head;
+          let $1 = new$7.head;
           if ($1 instanceof UnsafeInnerHtml) {
             let next$1 = $1;
-            let new$1 = new$8.tail;
+            let new$1 = new$7.tail;
             let prev$1 = $;
             let old$1 = old.tail;
             let composed_mapper = compose_mapper(mapper, next$1.mapper);
@@ -4503,7 +4503,7 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
             loop$events = events$1;
           } else {
             let next$1 = $1;
-            let new_remaining = new$8.tail;
+            let new_remaining = new$7.tail;
             let prev$1 = $;
             let old_remaining = old.tail;
             let change = replace2(node_index - moved_offset, next$1);
@@ -4538,11 +4538,11 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
     }
   }
 }
-function diff(events, old, new$8) {
+function diff(events, old, new$7) {
   return do_diff(
     toList([old]),
     empty2(),
-    toList([new$8]),
+    toList([new$7]),
     empty2(),
     empty2(),
     0,
@@ -4858,29 +4858,29 @@ var Reconciler = class {
         addEventListener(node, name, handleEvent, { passive });
         this.#updateDebounceThrottle(throttles, name, throttleDelay);
         this.#updateDebounceThrottle(debouncers, name, debounceDelay);
-        handlers.set(name, (event4) => this.#handleEvent(attribute3, event4));
+        handlers.set(name, (event2) => this.#handleEvent(attribute3, event2));
         break;
       }
     }
   }
-  #updateDebounceThrottle(map4, name, delay) {
-    const debounceOrThrottle = map4.get(name);
+  #updateDebounceThrottle(map3, name, delay) {
+    const debounceOrThrottle = map3.get(name);
     if (delay > 0) {
       if (debounceOrThrottle) {
         debounceOrThrottle.delay = delay;
       } else {
-        map4.set(name, { delay });
+        map3.set(name, { delay });
       }
     } else if (debounceOrThrottle) {
       const { timeout } = debounceOrThrottle;
       if (timeout) {
         clearTimeout(timeout);
       }
-      map4.delete(name);
+      map3.delete(name);
     }
   }
-  #handleEvent(attribute3, event4) {
-    const { currentTarget, type } = event4;
+  #handleEvent(attribute3, event2) {
+    const { currentTarget, type } = event2;
     const { debouncers, throttles } = currentTarget[meta];
     const path = getPath(currentTarget);
     const {
@@ -4889,22 +4889,22 @@ var Reconciler = class {
       include,
       immediate
     } = attribute3;
-    if (prevent.kind === always_kind) event4.preventDefault();
-    if (stop.kind === always_kind) event4.stopPropagation();
+    if (prevent.kind === always_kind) event2.preventDefault();
+    if (stop.kind === always_kind) event2.stopPropagation();
     if (type === "submit") {
-      event4.detail ??= {};
-      event4.detail.formData = [
-        ...new FormData(event4.target, event4.submitter).entries()
+      event2.detail ??= {};
+      event2.detail.formData = [
+        ...new FormData(event2.target, event2.submitter).entries()
       ];
     }
-    const data = this.#useServerEvents ? createServerEvent(event4, include ?? []) : event4;
+    const data = this.#useServerEvents ? createServerEvent(event2, include ?? []) : event2;
     const throttle = throttles.get(type);
     if (throttle) {
       const now = Date.now();
       const last = throttle.last || 0;
       if (now > last + throttle.delay) {
         throttle.last = now;
-        throttle.lastEvent = event4;
+        throttle.lastEvent = event2;
         this.#dispatch(data, path, type, immediate);
       }
     }
@@ -4912,7 +4912,7 @@ var Reconciler = class {
     if (debounce) {
       clearTimeout(debounce.timeout);
       debounce.timeout = setTimeout(() => {
-        if (event4 === throttles.get(type)?.lastEvent) return;
+        if (event2 === throttles.get(type)?.lastEvent) return;
         this.#dispatch(data, path, type, immediate);
       }, debounce.delay);
     }
@@ -4932,22 +4932,22 @@ var iterate = (list4, callback) => {
     }
   }
 };
-var handleEvent = (event4) => {
-  const { currentTarget, type } = event4;
+var handleEvent = (event2) => {
+  const { currentTarget, type } = event2;
   const handler = currentTarget[meta].handlers.get(type);
-  handler(event4);
+  handler(event2);
 };
-var createServerEvent = (event4, include = []) => {
+var createServerEvent = (event2, include = []) => {
   const data = {};
-  if (event4.type === "input" || event4.type === "change") {
+  if (event2.type === "input" || event2.type === "change") {
     include.push("target.value");
   }
-  if (event4.type === "submit") {
+  if (event2.type === "submit") {
     include.push("detail.formData");
   }
   for (const property3 of include) {
     const path = property3.split(".");
-    for (let i = 0, input = event4, output = data; i < path.length; i++) {
+    for (let i = 0, input = event2, output = data; i < path.length; i++) {
       if (i === path.length - 1) {
         output[path[i]] = input[path[i]];
         break;
@@ -5206,30 +5206,30 @@ var Runtime = class {
     this.#model = model;
     this.#view = view2;
     this.#update = update3;
-    this.root.addEventListener("context-request", (event4) => {
-      if (!(event4.context && event4.callback)) return;
-      if (!this.#contexts.has(event4.context)) return;
-      event4.stopImmediatePropagation();
-      const context = this.#contexts.get(event4.context);
-      if (event4.subscribe) {
+    this.root.addEventListener("context-request", (event2) => {
+      if (!(event2.context && event2.callback)) return;
+      if (!this.#contexts.has(event2.context)) return;
+      event2.stopImmediatePropagation();
+      const context = this.#contexts.get(event2.context);
+      if (event2.subscribe) {
         const unsubscribe = () => {
           context.subscribers = context.subscribers.filter(
-            (subscriber) => subscriber !== event4.callback
+            (subscriber) => subscriber !== event2.callback
           );
         };
-        context.subscribers.push([event4.callback, unsubscribe]);
-        event4.callback(context.value, unsubscribe);
+        context.subscribers.push([event2.callback, unsubscribe]);
+        event2.callback(context.value, unsubscribe);
       } else {
-        event4.callback(context.value);
+        event2.callback(context.value);
       }
     });
-    this.#reconciler = new Reconciler(this.root, (event4, path, name) => {
-      const [events, result] = handle(this.#events, path, name, event4);
+    this.#reconciler = new Reconciler(this.root, (event2, path, name) => {
+      const [events, result] = handle(this.#events, path, name, event2);
       this.#events = events;
       if (result.isOk()) {
         const handler = result[0];
-        if (handler.stop_propagation) event4.stopPropagation();
-        if (handler.prevent_default) event4.preventDefault();
+        if (handler.stop_propagation) event2.stopPropagation();
+        if (handler.prevent_default) event2.preventDefault();
         this.dispatch(handler.message, false);
       }
     });
@@ -5250,10 +5250,10 @@ var Runtime = class {
       this.#tick(effects);
     }
   }
-  emit(event4, data) {
+  emit(event2, data) {
     const target = this.root.host ?? this.root;
     target.dispatchEvent(
-      new CustomEvent(event4, {
+      new CustomEvent(event2, {
         detail: data,
         bubbles: true,
         composed: true
@@ -5296,7 +5296,7 @@ var Runtime = class {
   #shouldFlush = false;
   #actions = {
     dispatch: (msg, immediate) => this.dispatch(msg, immediate),
-    emit: (event4, data) => this.emit(event4, data),
+    emit: (event2, data) => this.emit(event2, data),
     select: () => {
     },
     root: () => this.root,
@@ -5450,8 +5450,8 @@ var Spa = class {
   dispatch(msg, immediate) {
     this.#runtime.dispatch(msg, immediate);
   }
-  emit(event4, data) {
-    this.#runtime.emit(event4, data);
+  emit(event2, data) {
+    this.#runtime.emit(event2, data);
   }
 };
 var start = ({ init: init2, update: update3, view: view2 }, selector, flags) => {
@@ -6353,15 +6353,15 @@ function space_ship(side) {
       "let_assert",
       FILEPATH3,
       "space_invaders",
-      96,
+      97,
       "space_ship",
       "Pattern match failed, no pattern matched the value.",
       {
         value: $,
-        start: 2410,
-        end: 2474,
-        pattern_start: 2421,
-        pattern_end: 2430
+        start: 2414,
+        end: 2478,
+        pattern_start: 2425,
+        pattern_end: 2434
       }
     );
   }
@@ -6442,7 +6442,7 @@ function update2(model, msg) {
     return [new Ready(current_time, fps, max3), schedule_next_frame()];
   } else {
     let key = msg.key;
-    echo(key, void 0, "src/space_invaders.gleam", 74);
+    echo(key, void 0, "src/space_invaders.gleam", 75);
     return [model, schedule_next_frame()];
   }
 }
@@ -6490,10 +6490,10 @@ function main() {
       "let_assert",
       FILEPATH3,
       "space_invaders",
-      26,
+      27,
       "main",
       "Pattern match failed, no pattern matched the value.",
-      { value: $, start: 698, end: 753, pattern_start: 709, pattern_end: 720 }
+      { value: $, start: 702, end: 757, pattern_start: 713, pattern_end: 724 }
     );
   }
   addGlobalEventListener(
@@ -6516,15 +6516,15 @@ function main() {
           "let_assert",
           FILEPATH3,
           "space_invaders",
-          33,
+          34,
           "main",
           "Pattern match failed, no pattern matched the value.",
           {
             value: result,
-            start: 945,
-            end: 974,
-            pattern_start: 956,
-            pattern_end: 965
+            start: 949,
+            end: 978,
+            pattern_start: 960,
+            pattern_end: 969
           }
         );
       }
@@ -6632,11 +6632,11 @@ var Echo$Inspector = class {
     const head = name === "Object" ? "" : name + " ";
     return `//js(${head}{${body}})`;
   }
-  #dict(map4) {
+  #dict(map3) {
     let body = "dict.from_list([";
     let first = true;
     let key_value_pairs = [];
-    map4.forEach((value, key) => {
+    map3.forEach((value, key) => {
       key_value_pairs.push([key, value]);
     });
     key_value_pairs.sort();
