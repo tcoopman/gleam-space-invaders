@@ -1,4 +1,3 @@
-import engine
 import game
 import gleam/dynamic.{type Dynamic}
 import gleam/dynamic/decode
@@ -111,10 +110,9 @@ fn calc_frame_time(model: Model, current_time: Float) {
   }
 }
 
-fn schedule_next_frame() {
-  effect.from(fn(dispatch) {
-    engine.request_animation_frame(fn(timestamp) { dispatch(Tick(timestamp)) })
-  })
+fn schedule_next_frame() -> Effect(Msg) {
+  use dispatch, _ <- effect.after_paint
+  dispatch(Tick(0.0))
 }
 
 fn space_ship(side) -> p.Picture {

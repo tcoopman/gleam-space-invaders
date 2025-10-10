@@ -2271,8 +2271,8 @@ function float3(input) {
 function object2(entries) {
   return object(entries);
 }
-function preprocessed_array(from2) {
-  return array(from2);
+function preprocessed_array(from) {
+  return array(from);
 }
 function array2(entries, inner_type) {
   let _pipe = entries;
@@ -2977,11 +2977,11 @@ function height(value) {
 
 // build/dev/javascript/lustre/lustre/effect.mjs
 var Effect = class extends CustomType {
-  constructor(synchronous, before_paint2, after_paint) {
+  constructor(synchronous, before_paint2, after_paint2) {
     super();
     this.synchronous = synchronous;
     this.before_paint = before_paint2;
-    this.after_paint = after_paint;
+    this.after_paint = after_paint2;
   }
 };
 var empty = /* @__PURE__ */ new Effect(
@@ -2992,12 +2992,13 @@ var empty = /* @__PURE__ */ new Effect(
 function none() {
   return empty;
 }
-function from(effect) {
+function after_paint(effect) {
   let task = (actions) => {
+    let root3 = actions.root();
     let dispatch2 = actions.dispatch;
-    return effect(dispatch2);
+    return effect(dispatch2, root3);
   };
-  return new Effect(toList([task]), empty.before_paint, empty.after_paint);
+  return new Effect(empty.synchronous, empty.before_paint, toList([task]));
 }
 
 // build/dev/javascript/lustre/lustre/internals/mutable_map.ffi.mjs
@@ -6056,11 +6057,11 @@ function picture_to_json(picture) {
       ])
     );
   } else {
-    let from2 = picture[0];
+    let from = picture[0];
     return object2(
       toList([
         ["type", string3("combine")],
-        ["pictures", array2(from2, picture_to_json)]
+        ["pictures", array2(from, picture_to_json)]
       ])
     );
   }
@@ -6359,11 +6360,6 @@ function addGlobalEventListener(name, cb) {
   window.addEventListener(name, cb);
 }
 
-// build/dev/javascript/space_invaders/engine_ffi.mjs
-function request_animation_frame(callback) {
-  window.requestAnimationFrame(callback);
-}
-
 // build/dev/javascript/space_invaders/game.mjs
 var FILEPATH3 = "src/game.gleam";
 var Position = class extends CustomType {
@@ -6443,9 +6439,9 @@ var BulletShot = class extends CustomType {
   }
 };
 var BulletMoved = class extends CustomType {
-  constructor(from2, to) {
+  constructor(from, to) {
     super();
-    this.from = from2;
+    this.from = from;
     this.to = to;
   }
 };
@@ -6509,12 +6505,12 @@ function apply_state(state, events) {
           state2.enemies
         );
       } else if (event2 instanceof BulletMoved) {
-        let from2 = event2.from;
+        let from = event2.from;
         let to = event2.to;
         let bullets$1 = map(
           bullets,
           (bullet) => {
-            let $ = isEqual(bullet, from2);
+            let $ = isEqual(bullet, from);
             if ($) {
               return to;
             } else {
@@ -6669,15 +6665,15 @@ function update_game(model, cmd) {
       "let_assert",
       FILEPATH4,
       "space_invaders",
-      64,
+      63,
       "update_game",
       "Pattern match failed, no pattern matched the value.",
       {
         value: model,
-        start: 1561,
-        end: 1596,
-        pattern_start: 1572,
-        pattern_end: 1588
+        start: 1547,
+        end: 1582,
+        pattern_start: 1558,
+        pattern_end: 1574
       }
     );
   }
@@ -6692,13 +6688,9 @@ function calc_frame_time(model, current_time) {
   }
 }
 function schedule_next_frame() {
-  return from(
-    (dispatch2) => {
-      return request_animation_frame(
-        (timestamp) => {
-          return dispatch2(new Tick3(timestamp));
-        }
-      );
+  return after_paint(
+    (dispatch2, _) => {
+      return dispatch2(new Tick3(0));
     }
   );
 }
@@ -6718,15 +6710,15 @@ function update2(model, msg) {
       "let_assert",
       FILEPATH4,
       "space_invaders",
-      73,
+      72,
       "update",
       "Pattern match failed, no pattern matched the value.",
       {
         value: model$1,
-        start: 1803,
-        end: 1831,
-        pattern_start: 1814,
-        pattern_end: 1823
+        start: 1789,
+        end: 1817,
+        pattern_start: 1800,
+        pattern_end: 1809
       }
     );
   }
@@ -6748,15 +6740,15 @@ function update2(model, msg) {
         "let_assert",
         FILEPATH4,
         "space_invaders",
-        83,
+        82,
         "update",
         "Pattern match failed, no pattern matched the value.",
         {
           value: model$2,
-          start: 2093,
-          end: 2121,
-          pattern_start: 2104,
-          pattern_end: 2113
+          start: 2079,
+          end: 2107,
+          pattern_start: 2090,
+          pattern_end: 2099
         }
       );
     }
@@ -6792,15 +6784,15 @@ function space_ship(side) {
       "let_assert",
       FILEPATH4,
       "space_invaders",
-      121,
+      119,
       "space_ship",
       "Pattern match failed, no pattern matched the value.",
       {
         value: $,
-        start: 3069,
-        end: 3133,
-        pattern_start: 3080,
-        pattern_end: 3089
+        start: 3018,
+        end: 3082,
+        pattern_start: 3029,
+        pattern_end: 3038
       }
     );
   }
@@ -6936,10 +6928,10 @@ function main() {
       "let_assert",
       FILEPATH4,
       "space_invaders",
-      31,
+      30,
       "main",
       "Pattern match failed, no pattern matched the value.",
-      { value: $, start: 751, end: 806, pattern_start: 762, pattern_end: 773 }
+      { value: $, start: 737, end: 792, pattern_start: 748, pattern_end: 759 }
     );
   }
   addGlobalEventListener(
@@ -6962,15 +6954,15 @@ function main() {
           "let_assert",
           FILEPATH4,
           "space_invaders",
-          38,
+          37,
           "main",
           "Pattern match failed, no pattern matched the value.",
           {
             value: result,
-            start: 997,
-            end: 1026,
-            pattern_start: 1008,
-            pattern_end: 1017
+            start: 983,
+            end: 1012,
+            pattern_start: 994,
+            pattern_end: 1003
           }
         );
       }
