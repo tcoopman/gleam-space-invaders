@@ -27,7 +27,7 @@ pub fn main() {
   canvas.define_web_component()
   let app = lustre.application(init, update, view)
   let assert Ok(runtime) = lustre.start(app, "#app", Nil)
-  add_event_listener("keypress", fn(e) {
+  add_event_listener("keydown", fn(e) {
     let decoder = {
       use key <- decode.field("key", decode.string)
       key |> decode.success
@@ -91,6 +91,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
         "a" -> #(update_game(model, game.MoveLeft), effect.none())
         "d" -> #(update_game(model, game.MoveRight), effect.none())
         "s" -> #(update_game(model, game.Shoot), effect.none())
+        "e" -> #(update_game(model, game.IntroduceEnemy(50, 50)), effect.none())
         _ -> #(model, effect.none())
       }
     }
@@ -147,8 +148,11 @@ fn render_game(game: game.State) -> p.Picture {
   let side_size = size /. steps
 
   let ship = space_ship(side_size)
-  let game.Playing(spaceship: game.Spaceship(position:, bullets:, ..), ..) =
-    game
+  let game.Playing(
+    spaceship: game.Spaceship(position:, bullets:, ..),
+    enemies:,
+    ..,
+  ) = game
 
   let red = colour.light_red
   let spaceship_position = int.to_float(position) *. side_size
@@ -157,17 +161,26 @@ fn render_game(game: game.State) -> p.Picture {
       let game.Position(x:, y:) = bullet
       let bullet_x = int.to_float(x) *. side_size
       let bullet_y = size -. int.to_float(y) *. side_size
-      echo #(y, bullet_y)
       p.rectangle(side_size, 30.0)
       |> p.fill(red)
       |> p.translate_x(bullet_x +. 2.0 *. side_size)
       |> p.translate_y(bullet_y)
     })
 
+  let rendered_enemies =
+    list.map(enemies, fn(enemy) {
+      let game.Enemy(position: game.Position(x:, y:), width:) = enemy
+      let enemy_x = int.to_float(x) *. side_size
+      let enemy_y = size -. int.to_float(y) *. side_size
+      p.rectangle(int.to_float(width) *. side_size, 50.0)
+      |> p.fill(colour.light_orange)
+      |> p.translate_xy(enemy_x, enemy_y)
+    })
+
   p.combine([
     ship
       |> p.translate_xy(spaceship_position, size -. side_size *. 3.0),
-    ..rendered_bullets
+    ..list.append(rendered_bullets, rendered_enemies)
   ])
 }
 

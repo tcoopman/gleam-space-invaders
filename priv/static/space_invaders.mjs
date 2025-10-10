@@ -257,11 +257,6 @@ function bitArrayByteAt(buffer, bitOffset, index4) {
     return a | b;
   }
 }
-var UtfCodepoint = class {
-  constructor(value) {
-    this.value = value;
-  }
-};
 var isBitArrayDeprecationMessagePrinted = {};
 function bitArrayPrintDeprecationWarning(name, message) {
   if (isBitArrayDeprecationMessagePrinted[name]) {
@@ -1124,6 +1119,61 @@ function reverse_and_prepend(loop$prefix, loop$suffix) {
 function reverse(list4) {
   return reverse_and_prepend(list4, toList([]));
 }
+function filter_loop(loop$list, loop$fun, loop$acc) {
+  while (true) {
+    let list4 = loop$list;
+    let fun = loop$fun;
+    let acc = loop$acc;
+    if (list4 instanceof Empty) {
+      return reverse(acc);
+    } else {
+      let first$1 = list4.head;
+      let rest$1 = list4.tail;
+      let _block;
+      let $ = fun(first$1);
+      if ($) {
+        _block = prepend(first$1, acc);
+      } else {
+        _block = acc;
+      }
+      let new_acc = _block;
+      loop$list = rest$1;
+      loop$fun = fun;
+      loop$acc = new_acc;
+    }
+  }
+}
+function filter(list4, predicate) {
+  return filter_loop(list4, predicate, toList([]));
+}
+function filter_map_loop(loop$list, loop$fun, loop$acc) {
+  while (true) {
+    let list4 = loop$list;
+    let fun = loop$fun;
+    let acc = loop$acc;
+    if (list4 instanceof Empty) {
+      return reverse(acc);
+    } else {
+      let first$1 = list4.head;
+      let rest$1 = list4.tail;
+      let _block;
+      let $ = fun(first$1);
+      if ($ instanceof Ok) {
+        let first$2 = $[0];
+        _block = prepend(first$2, acc);
+      } else {
+        _block = acc;
+      }
+      let new_acc = _block;
+      loop$list = rest$1;
+      loop$fun = fun;
+      loop$acc = new_acc;
+    }
+  }
+}
+function filter_map(list4, fun) {
+  return filter_map_loop(list4, fun, toList([]));
+}
 function map_loop(loop$list, loop$fun, loop$acc) {
   while (true) {
     let list4 = loop$list;
@@ -1159,6 +1209,26 @@ function append_loop(loop$first, loop$second) {
 }
 function append(first, second) {
   return append_loop(reverse(first), second);
+}
+function flatten_loop(loop$lists, loop$acc) {
+  while (true) {
+    let lists = loop$lists;
+    let acc = loop$acc;
+    if (lists instanceof Empty) {
+      return reverse(acc);
+    } else {
+      let list4 = lists.head;
+      let further_lists = lists.tail;
+      loop$lists = further_lists;
+      loop$acc = reverse_and_prepend(list4, acc);
+    }
+  }
+}
+function flatten(lists) {
+  return flatten_loop(lists, toList([]));
+}
+function flat_map(list4, fun) {
+  return flatten(map(list4, fun));
 }
 function fold(loop$list, loop$initial, loop$fun) {
   while (true) {
@@ -1196,6 +1266,25 @@ function index_fold_loop(loop$over, loop$acc, loop$with, loop$index) {
 }
 function index_fold(list4, initial, fun) {
   return index_fold_loop(list4, initial, fun, 0);
+}
+function any(loop$list, loop$predicate) {
+  while (true) {
+    let list4 = loop$list;
+    let predicate = loop$predicate;
+    if (list4 instanceof Empty) {
+      return false;
+    } else {
+      let first$1 = list4.head;
+      let rest$1 = list4.tail;
+      let $ = predicate(first$1);
+      if ($) {
+        return $;
+      } else {
+        loop$list = rest$1;
+        loop$predicate = predicate;
+      }
+    }
+  }
 }
 function sequences(loop$list, loop$compare, loop$growing, loop$direction, loop$prev, loop$acc) {
   while (true) {
@@ -2679,6 +2768,12 @@ var light_red = /* @__PURE__ */ new Rgba(
   0.9372549019607843,
   0.1607843137254902,
   0.1607843137254902,
+  1
+);
+var light_orange = /* @__PURE__ */ new Rgba(
+  0.9882352941176471,
+  0.6862745098039216,
+  0.24313725490196078,
   1
 );
 
@@ -6329,11 +6424,19 @@ var Board = class extends CustomType {
     this.width = width2;
   }
 };
+var Enemy = class extends CustomType {
+  constructor(position, width2) {
+    super();
+    this.position = position;
+    this.width = width2;
+  }
+};
 var Playing = class extends CustomType {
-  constructor(board, spaceship) {
+  constructor(board, spaceship, enemies) {
     super();
     this.board = board;
     this.spaceship = spaceship;
+    this.enemies = enemies;
   }
 };
 var MoveLeft = class extends CustomType {
@@ -6344,62 +6447,177 @@ var Shoot = class extends CustomType {
 };
 var Tick2 = class extends CustomType {
 };
+var IntroduceEnemy = class extends CustomType {
+  constructor(x, y) {
+    super();
+    this.x = x;
+    this.y = y;
+  }
+};
+var BulletRemoved = class extends CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+};
+var EnemyDied = class extends CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+};
 var board_width = 100;
+var board_height = 100;
 function apply(cmd, state) {
   let spaceship;
+  let enemies;
   spaceship = state.spaceship;
-  let _block;
+  enemies = state.enemies;
   if (cmd instanceof MoveLeft) {
     let $ = spaceship.position;
     if ($ === 0) {
-      _block = spaceship;
+      return new Playing(state.board, spaceship, state.enemies);
     } else {
-      let current = $;
-      _block = new Spaceship(current - 1, spaceship.bullets, spaceship.height);
+      let position = $;
+      return new Playing(
+        state.board,
+        new Spaceship(position - 1, spaceship.bullets, spaceship.height),
+        state.enemies
+      );
     }
   } else if (cmd instanceof MoveRight) {
     let position = spaceship.position;
     if (position === 100) {
-      _block = spaceship;
+      return new Playing(state.board, spaceship, state.enemies);
     } else {
-      let current = spaceship.position;
-      _block = new Spaceship(current + 1, spaceship.bullets, spaceship.height);
+      let position$1 = spaceship.position;
+      return new Playing(
+        state.board,
+        new Spaceship(position$1 + 1, spaceship.bullets, spaceship.height),
+        state.enemies
+      );
     }
   } else if (cmd instanceof Shoot) {
     let position = spaceship.position;
     let bullets = spaceship.bullets;
     let height2 = spaceship.height;
-    _block = new Spaceship(
-      spaceship.position,
-      prepend(new Position(position, height2), bullets),
-      spaceship.height
+    return new Playing(
+      state.board,
+      new Spaceship(
+        spaceship.position,
+        prepend(new Position(position, height2), bullets),
+        spaceship.height
+      ),
+      state.enemies
     );
-  } else {
+  } else if (cmd instanceof Tick2) {
     let bullets = spaceship.bullets;
-    let _block$1;
+    let _block;
     let _pipe = bullets;
-    _block$1 = map(
+    _block = filter_map(
       _pipe,
       (bullet) => {
         let x;
         let y;
         x = bullet.x;
         y = bullet.y;
-        return new Position(x, y + 1);
+        let $ = y + 1 > board_height;
+        if ($) {
+          return new Error("");
+        } else {
+          return new Ok(new Position(x, y + 1));
+        }
       }
     );
-    let bullets$1 = _block$1;
-    _block = new Spaceship(spaceship.position, bullets$1, spaceship.height);
+    let bullets$1 = _block;
+    let events = flat_map(
+      bullets$1,
+      (bullet) => {
+        let x;
+        let y;
+        x = bullet.x;
+        y = bullet.y;
+        return flat_map(
+          enemies,
+          (enemy) => {
+            let enemy_x;
+            let enemy_y;
+            let width2;
+            width2 = enemy.width;
+            enemy_x = enemy.position.x;
+            enemy_y = enemy.position.y;
+            let $ = y === enemy_y && enemy_x - globalThis.Math.trunc(
+              width2 / 2
+            ) < x && enemy_x + globalThis.Math.trunc(width2 / 2) > x;
+            if ($) {
+              return toList([
+                new BulletRemoved(new Position(x, y)),
+                new EnemyDied(new Position(enemy_x, enemy_y))
+              ]);
+            } else {
+              return toList([]);
+            }
+          }
+        );
+      }
+    );
+    let bullets$2 = filter(
+      bullets$1,
+      (bullet) => {
+        return !any(
+          events,
+          (event2) => {
+            if (event2 instanceof BulletRemoved) {
+              let pos = event2[0];
+              return isEqual(pos, bullet);
+            } else {
+              return false;
+            }
+          }
+        );
+      }
+    );
+    let enemies$1 = filter(
+      enemies,
+      (enemy) => {
+        let enemy_position;
+        enemy_position = enemy.position;
+        return !any(
+          events,
+          (event2) => {
+            if (event2 instanceof EnemyDied) {
+              let pos = event2[0];
+              return isEqual(pos, enemy_position);
+            } else {
+              return false;
+            }
+          }
+        );
+      }
+    );
+    return new Playing(
+      state.board,
+      new Spaceship(spaceship.position, bullets$2, spaceship.height),
+      enemies$1
+    );
+  } else {
+    let x = cmd.x;
+    let y = cmd.y;
+    let enemies$1;
+    enemies$1 = state.enemies;
+    return new Playing(
+      state.board,
+      state.spaceship,
+      prepend(new Enemy(new Position(x, y), 6), enemies$1)
+    );
   }
-  let spaceship$1 = _block;
-  return new Playing(state.board, spaceship$1);
 }
-var board_height = 100;
 var spaceship_height = 5;
 function create_game() {
   return new Playing(
     new Board(board_height, board_width),
-    new Spaceship(50, toList([]), spaceship_height)
+    new Spaceship(50, toList([]), spaceship_height),
+    toList([])
   );
 }
 
@@ -6441,10 +6659,10 @@ function update_game(model, cmd) {
       "Pattern match failed, no pattern matched the value.",
       {
         value: model,
-        start: 1544,
-        end: 1579,
-        pattern_start: 1555,
-        pattern_end: 1571
+        start: 1543,
+        end: 1578,
+        pattern_start: 1554,
+        pattern_end: 1570
       }
     );
   }
@@ -6490,10 +6708,10 @@ function update2(model, msg) {
       "Pattern match failed, no pattern matched the value.",
       {
         value: model$1,
-        start: 1786,
-        end: 1814,
-        pattern_start: 1797,
-        pattern_end: 1806
+        start: 1785,
+        end: 1813,
+        pattern_start: 1796,
+        pattern_end: 1805
       }
     );
   }
@@ -6520,10 +6738,10 @@ function update2(model, msg) {
         "Pattern match failed, no pattern matched the value.",
         {
           value: model$2,
-          start: 2198,
-          end: 2226,
-          pattern_start: 2209,
-          pattern_end: 2218
+          start: 2197,
+          end: 2225,
+          pattern_start: 2208,
+          pattern_end: 2217
         }
       );
     }
@@ -6536,6 +6754,11 @@ function update2(model, msg) {
       return [update_game(model$1, new MoveRight()), none()];
     } else if (key === "s") {
       return [update_game(model$1, new Shoot()), none()];
+    } else if (key === "e") {
+      return [
+        update_game(model$1, new IntroduceEnemy(50, 50)),
+        none()
+      ];
     } else {
       return [model$1, none()];
     }
@@ -6551,15 +6774,15 @@ function space_ship(side) {
       "let_assert",
       FILEPATH3,
       "space_invaders",
-      116,
+      117,
       "space_ship",
       "Pattern match failed, no pattern matched the value.",
       {
         value: $,
-        start: 3017,
-        end: 3081,
-        pattern_start: 3028,
-        pattern_end: 3037
+        start: 3097,
+        end: 3161,
+        pattern_start: 3108,
+        pattern_end: 3117
       }
     );
   }
@@ -6604,6 +6827,8 @@ function render_game(game) {
   let ship = space_ship(side_size);
   let position;
   let bullets;
+  let enemies;
+  enemies = game.enemies;
   position = game.spaceship.position;
   bullets = game.spaceship.bullets;
   let red = light_red;
@@ -6617,11 +6842,26 @@ function render_game(game) {
       y = bullet.y;
       let bullet_x = identity(x) * side_size;
       let bullet_y = size$1 - identity(y) * side_size;
-      echo([y, bullet_y], void 0, "src/space_invaders.gleam", 160);
       let _pipe = rectangle(side_size, 30);
       let _pipe$1 = fill(_pipe, red);
       let _pipe$2 = translate_x(_pipe$1, bullet_x + 2 * side_size);
       return translate_y(_pipe$2, bullet_y);
+    }
+  );
+  let rendered_enemies = map(
+    enemies,
+    (enemy) => {
+      let x;
+      let y;
+      let width2;
+      width2 = enemy.width;
+      x = enemy.position.x;
+      y = enemy.position.y;
+      let enemy_x = identity(x) * side_size;
+      let enemy_y = size$1 - identity(y) * side_size;
+      let _pipe = rectangle(identity(width2) * side_size, 50);
+      let _pipe$1 = fill(_pipe, light_orange);
+      return translate_xy(_pipe$1, enemy_x, enemy_y);
     }
   );
   return combine(
@@ -6634,7 +6874,7 @@ function render_game(game) {
           size$1 - side_size * 3
         );
       })(),
-      rendered_bullets
+      append(rendered_bullets, rendered_enemies)
     )
   );
 }
@@ -6678,7 +6918,7 @@ function main() {
     );
   }
   addGlobalEventListener(
-    "keypress",
+    "keydown",
     (e) => {
       let decoder2 = field(
         "key",
@@ -6702,10 +6942,10 @@ function main() {
           "Pattern match failed, no pattern matched the value.",
           {
             value: result,
-            start: 980,
-            end: 1009,
-            pattern_start: 991,
-            pattern_end: 1e3
+            start: 979,
+            end: 1008,
+            pattern_start: 990,
+            pattern_end: 999
           }
         );
       }
@@ -6717,209 +6957,6 @@ function main() {
   );
   return void 0;
 }
-function echo(value, message, file, line) {
-  const grey = "\x1B[90m";
-  const reset_color = "\x1B[39m";
-  const file_line = `${file}:${line}`;
-  const inspector = new Echo$Inspector();
-  const string_value = inspector.inspect(value);
-  const string_message = message === void 0 ? "" : " " + message;
-  if (globalThis.process?.stderr?.write) {
-    const string5 = `${grey}${file_line}${reset_color}${string_message}
-${string_value}
-`;
-    globalThis.process.stderr.write(string5);
-  } else if (globalThis.Deno) {
-    const string5 = `${grey}${file_line}${reset_color}${string_message}
-${string_value}
-`;
-    globalThis.Deno.stderr.writeSync(new TextEncoder().encode(string5));
-  } else {
-    const string5 = `${file_line}
-${string_value}`;
-    globalThis.console.log(string5);
-  }
-  return value;
-}
-var Echo$Inspector = class {
-  #references = /* @__PURE__ */ new Set();
-  #isDict(value) {
-    try {
-      return value instanceof Dict;
-    } catch {
-      return false;
-    }
-  }
-  #float(float4) {
-    const string5 = float4.toString().replace("+", "");
-    if (string5.indexOf(".") >= 0) {
-      return string5;
-    } else {
-      const index4 = string5.indexOf("e");
-      if (index4 >= 0) {
-        return string5.slice(0, index4) + ".0" + string5.slice(index4);
-      } else {
-        return string5 + ".0";
-      }
-    }
-  }
-  inspect(v) {
-    const t = typeof v;
-    if (v === true) return "True";
-    if (v === false) return "False";
-    if (v === null) return "//js(null)";
-    if (v === void 0) return "Nil";
-    if (t === "string") return this.#string(v);
-    if (t === "bigint" || Number.isInteger(v)) return v.toString();
-    if (t === "number") return this.#float(v);
-    if (v instanceof UtfCodepoint) return this.#utfCodepoint(v);
-    if (v instanceof BitArray) return this.#bit_array(v);
-    if (v instanceof RegExp) return `//js(${v})`;
-    if (v instanceof Date) return `//js(Date("${v.toISOString()}"))`;
-    if (v instanceof globalThis.Error) return `//js(${v.toString()})`;
-    if (v instanceof Function) {
-      const args = [];
-      for (const i of Array(v.length).keys())
-        args.push(String.fromCharCode(i + 97));
-      return `//fn(${args.join(", ")}) { ... }`;
-    }
-    if (this.#references.size === this.#references.add(v).size) {
-      return "//js(circular reference)";
-    }
-    let printed;
-    if (Array.isArray(v)) {
-      printed = `#(${v.map((v2) => this.inspect(v2)).join(", ")})`;
-    } else if (v instanceof List) {
-      printed = this.#list(v);
-    } else if (v instanceof CustomType) {
-      printed = this.#customType(v);
-    } else if (this.#isDict(v)) {
-      printed = this.#dict(v);
-    } else if (v instanceof Set) {
-      return `//js(Set(${[...v].map((v2) => this.inspect(v2)).join(", ")}))`;
-    } else {
-      printed = this.#object(v);
-    }
-    this.#references.delete(v);
-    return printed;
-  }
-  #object(v) {
-    const name = Object.getPrototypeOf(v)?.constructor?.name || "Object";
-    const props = [];
-    for (const k of Object.keys(v)) {
-      props.push(`${this.inspect(k)}: ${this.inspect(v[k])}`);
-    }
-    const body = props.length ? " " + props.join(", ") + " " : "";
-    const head = name === "Object" ? "" : name + " ";
-    return `//js(${head}{${body}})`;
-  }
-  #dict(map3) {
-    let body = "dict.from_list([";
-    let first = true;
-    let key_value_pairs = [];
-    map3.forEach((value, key) => {
-      key_value_pairs.push([key, value]);
-    });
-    key_value_pairs.sort();
-    key_value_pairs.forEach(([key, value]) => {
-      if (!first) body = body + ", ";
-      body = body + "#(" + this.inspect(key) + ", " + this.inspect(value) + ")";
-      first = false;
-    });
-    return body + "])";
-  }
-  #customType(record) {
-    const props = Object.keys(record).map((label) => {
-      const value = this.inspect(record[label]);
-      return isNaN(parseInt(label)) ? `${label}: ${value}` : value;
-    }).join(", ");
-    return props ? `${record.constructor.name}(${props})` : record.constructor.name;
-  }
-  #list(list4) {
-    if (list4 instanceof Empty) {
-      return "[]";
-    }
-    let char_out = 'charlist.from_string("';
-    let list_out = "[";
-    let current = list4;
-    while (current instanceof NonEmpty) {
-      let element4 = current.head;
-      current = current.tail;
-      if (list_out !== "[") {
-        list_out += ", ";
-      }
-      list_out += this.inspect(element4);
-      if (char_out) {
-        if (Number.isInteger(element4) && element4 >= 32 && element4 <= 126) {
-          char_out += String.fromCharCode(element4);
-        } else {
-          char_out = null;
-        }
-      }
-    }
-    if (char_out) {
-      return char_out + '")';
-    } else {
-      return list_out + "]";
-    }
-  }
-  #string(str) {
-    let new_str = '"';
-    for (let i = 0; i < str.length; i++) {
-      const char = str[i];
-      switch (char) {
-        case "\n":
-          new_str += "\\n";
-          break;
-        case "\r":
-          new_str += "\\r";
-          break;
-        case "	":
-          new_str += "\\t";
-          break;
-        case "\f":
-          new_str += "\\f";
-          break;
-        case "\\":
-          new_str += "\\\\";
-          break;
-        case '"':
-          new_str += '\\"';
-          break;
-        default:
-          if (char < " " || char > "~" && char < "\xA0") {
-            new_str += "\\u{" + char.charCodeAt(0).toString(16).toUpperCase().padStart(4, "0") + "}";
-          } else {
-            new_str += char;
-          }
-      }
-    }
-    new_str += '"';
-    return new_str;
-  }
-  #utfCodepoint(codepoint2) {
-    return `//utfcodepoint(${String.fromCodePoint(codepoint2.value)})`;
-  }
-  #bit_array(bits) {
-    if (bits.bitSize === 0) {
-      return "<<>>";
-    }
-    let acc = "<<";
-    for (let i = 0; i < bits.byteSize - 1; i++) {
-      acc += bits.byteAt(i).toString();
-      acc += ", ";
-    }
-    if (bits.byteSize * 8 === bits.bitSize) {
-      acc += bits.byteAt(bits.byteSize - 1).toString();
-    } else {
-      const trailingBitsCount = bits.bitSize % 8;
-      acc += bits.byteAt(bits.byteSize - 1) >> 8 - trailingBitsCount;
-      acc += `:size(${trailingBitsCount})`;
-    }
-    acc += ">>";
-    return acc;
-  }
-};
 
 // build/.lustre/entry.mjs
 main();

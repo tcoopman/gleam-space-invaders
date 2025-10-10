@@ -1,4 +1,6 @@
-import game.{MoveLeft, MoveRight, Playing, Position, Shoot, Spaceship, Tick}
+import game.{
+  IntroduceEnemy, MoveLeft, MoveRight, Playing, Position, Shoot, Spaceship, Tick,
+}
 import gleeunit
 
 pub fn main() -> Nil {
@@ -53,7 +55,7 @@ pub fn bullet_moves_forward_after_tick_test() {
   assert Position(50, 5 + 1) == position
 }
 
-pub fn foo_test() {
+pub fn multiple_bullets_test() {
   let state =
     game.create_game()
     |> game.apply(Shoot, _)
@@ -64,6 +66,26 @@ pub fn foo_test() {
   let assert Playing(spaceship: Spaceship(bullets: [b2, b1], ..), ..) = state
   assert Position(50, 7) == b1
   assert Position(49, 6) == b2
+}
+
+pub fn enemy_shoot_test() {
+  let state =
+    game.create_game()
+    |> game.apply(IntroduceEnemy(50, 10), _)
+    |> game.apply(Shoot, _)
+
+  let assert Playing(enemies: [_], spaceship: Spaceship(bullets: [_], ..), ..) =
+    state
+
+  let state =
+    state
+    |> game.apply(Tick, _)
+    |> game.apply(Tick, _)
+    |> game.apply(Tick, _)
+    |> game.apply(Tick, _)
+    |> game.apply(Tick, _)
+  let assert Playing(enemies: [], spaceship: Spaceship(bullets: [], ..), ..) =
+    state
 }
 
 fn spaceship_position(state) {
