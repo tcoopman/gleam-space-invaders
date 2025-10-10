@@ -90,7 +90,13 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
         "a" -> #(update_game(model, game.MoveLeft), effect.none())
         "d" -> #(update_game(model, game.MoveRight), effect.none())
         "s" -> #(update_game(model, game.Shoot), effect.none())
-        "e" -> #(update_game(model, game.IntroduceEnemy(50, 50)), effect.none())
+        "e" -> #(
+          update_game(
+            model,
+            game.IntroduceEnemy(int.random(50), int.random(50) + 20),
+          ),
+          effect.none(),
+        )
         _ -> #(model, effect.none())
       }
     }

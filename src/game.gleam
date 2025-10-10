@@ -11,7 +11,7 @@ pub type Position {
 }
 
 pub type Spaceship {
-  Spaceship(position: Int, bullets: List(Position), height: Int)
+  Spaceship(position: Int, bullets: List(Position), height: Int, width: Int)
 }
 
 pub type Board {
@@ -47,7 +47,12 @@ pub type Command {
 pub fn create_game() -> State {
   Playing(
     last_id: 0,
-    spaceship: Spaceship(position: 50, bullets: [], height: spaceship_height),
+    spaceship: Spaceship(
+      position: 50,
+      bullets: [],
+      height: spaceship_height,
+      width: spaceship_height,
+    ),
     board: Board(width: board_width, height: board_height),
     enemies: [],
     enemy_bullets: [],
@@ -65,6 +70,8 @@ type Event {
   EnemyMoved(Position)
   EnemyBulletShot(Bullet)
   EnemyBulletUpdated(Bullet)
+  EnemyBulletRemoved(Int)
+  WeDied
 }
 
 pub fn apply(cmd: Command, state: State) -> State {
@@ -84,7 +91,6 @@ pub fn apply(cmd: Command, state: State) -> State {
         let enemies_hit =
           list.flat_map(enemies, fn(enemy) {
             let Enemy(Position(x: enemy_x, y: enemy_y), width:) = enemy
-            echo [enemy_x, width, x, y]
             case
               y + 1 == enemy_y
               && enemy_x - width / 2 <= x
@@ -107,10 +113,10 @@ pub fn apply(cmd: Command, state: State) -> State {
         list.append(enemies_hit, bullet_events)
       })
       |> list.append({
-        list.map(enemy_bullets, fn(bullet) {
+        list.flat_map(enemy_bullets, fn(bullet) {
+          echo bullet
           let Bullet(position: Position(x:, y:), count_down:, ..) = bullet
-          echo count_down
-          case count_down == 0 {
+          let updated = case count_down == 0 {
             True ->
               EnemyBulletUpdated(
                 Bullet(..bullet, position: Position(x, y - 1), count_down: 5),
@@ -118,6 +124,25 @@ pub fn apply(cmd: Command, state: State) -> State {
             False ->
               EnemyBulletUpdated(Bullet(..bullet, count_down: count_down - 1))
           }
+
+          let removed_bullet = case y < 0 {
+            True -> [EnemyBulletRemoved(bullet.id)]
+            False -> []
+          }
+
+          let ship_hit_events = {
+            let space_x = spaceship.position
+            case
+              bullet.position.y == 0
+              && space_x - spaceship.width / 2 <= bullet.position.x
+              && space_x + spaceship.width / 2 >= bullet.position.x
+            {
+              True -> [WeDied]
+              False -> []
+            }
+          }
+
+          [updated, ..removed_bullet] |> list.append(ship_hit_events)
         })
       })
     }
@@ -186,6 +211,14 @@ fn apply_state(state, events) {
       }
       EnemyMoved(_) -> todo
       IdIncreased -> Playing(..state, last_id: state.last_id + 1)
+      EnemyBulletRemoved(bullet_id) -> {
+        let enemy_bullets =
+          list.filter(enemy_bullets, fn(b) { bullet_id != b.id })
+        Playing(..state, enemy_bullets:)
+      }
+      WeDied -> {
+        create_game()
+      }
     }
   })
 }

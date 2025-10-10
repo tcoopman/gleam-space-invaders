@@ -1909,11 +1909,21 @@ var trim_end_regex = /* @__PURE__ */ new RegExp(`[${unicode_whitespaces}]*$`);
 function ceiling(float4) {
   return Math.ceil(float4);
 }
+function floor(float4) {
+  return Math.floor(float4);
+}
 function round2(float4) {
   return Math.round(float4);
 }
 function power(base, exponent) {
   return Math.pow(base, exponent);
+}
+function random_uniform() {
+  const random_uniform_result = Math.random();
+  if (random_uniform_result === 1) {
+    return random_uniform();
+  }
+  return random_uniform_result;
 }
 function classify_dynamic(data) {
   if (typeof data === "string") {
@@ -2055,6 +2065,11 @@ function subtract(a, b) {
 function power3(base, exponent) {
   let _pipe = identity(base);
   return power2(_pipe, exponent);
+}
+function random(max4) {
+  let _pipe = random_uniform() * identity(max4);
+  let _pipe$1 = floor(_pipe);
+  return round(_pipe$1);
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/string.mjs
@@ -6367,11 +6382,12 @@ var Position = class extends CustomType {
   }
 };
 var Spaceship = class extends CustomType {
-  constructor(position, bullets, height2) {
+  constructor(position, bullets, height2, width2) {
     super();
     this.position = position;
     this.bullets = bullets;
     this.height = height2;
+    this.width = width2;
   }
 };
 var Board = class extends CustomType {
@@ -6478,6 +6494,26 @@ var EnemyBulletUpdated = class extends CustomType {
     this[0] = $0;
   }
 };
+var EnemyBulletRemoved = class extends CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+};
+var WeDied = class extends CustomType {
+};
+var board_width = 100;
+var board_height = 100;
+var spaceship_height = 5;
+function create_game() {
+  return new Playing(
+    0,
+    new Board(board_height, board_width),
+    new Spaceship(50, toList([]), spaceship_height, spaceship_height),
+    toList([]),
+    toList([])
+  );
+}
 function apply_state(state, events) {
   return fold(
     events,
@@ -6510,7 +6546,12 @@ function apply_state(state, events) {
         return new Playing(
           state2.last_id,
           state2.board,
-          new Spaceship(spaceship.position, bullets$1, spaceship.height),
+          new Spaceship(
+            spaceship.position,
+            bullets$1,
+            spaceship.height,
+            spaceship.width
+          ),
           state2.enemies,
           state2.enemy_bullets
         );
@@ -6536,7 +6577,12 @@ function apply_state(state, events) {
         return new Playing(
           state2.last_id,
           state2.board,
-          new Spaceship(pos, spaceship.bullets, spaceship.height),
+          new Spaceship(
+            pos,
+            spaceship.bullets,
+            spaceship.height,
+            spaceship.width
+          ),
           state2.enemies,
           state2.enemy_bullets
         );
@@ -6548,7 +6594,8 @@ function apply_state(state, events) {
           new Spaceship(
             spaceship.position,
             prepend(bullet, bullets),
-            spaceship.height
+            spaceship.height,
+            spaceship.width
           ),
           state2.enemies,
           state2.enemy_bullets
@@ -6570,7 +6617,12 @@ function apply_state(state, events) {
         return new Playing(
           state2.last_id,
           state2.board,
-          new Spaceship(spaceship.position, bullets$1, spaceship.height),
+          new Spaceship(
+            spaceship.position,
+            bullets$1,
+            spaceship.height,
+            spaceship.width
+          ),
           state2.enemies,
           state2.enemy_bullets
         );
@@ -6588,7 +6640,7 @@ function apply_state(state, events) {
           "todo",
           FILEPATH3,
           "game",
-          187,
+          212,
           "apply_state",
           "`todo` expression evaluated. This code has not yet been implemented.",
           {}
@@ -6602,7 +6654,7 @@ function apply_state(state, events) {
           state2.enemies,
           prepend(bullet, enemy_bullets)
         );
-      } else {
+      } else if (event2 instanceof EnemyBulletUpdated) {
         let bullet = event2[0];
         let enemy_bullets$1 = map(
           enemy_bullets,
@@ -6622,12 +6674,27 @@ function apply_state(state, events) {
           state2.enemies,
           enemy_bullets$1
         );
+      } else if (event2 instanceof EnemyBulletRemoved) {
+        let bullet_id = event2[0];
+        let enemy_bullets$1 = filter(
+          enemy_bullets,
+          (b) => {
+            return bullet_id !== b.id;
+          }
+        );
+        return new Playing(
+          state2.last_id,
+          state2.board,
+          state2.spaceship,
+          state2.enemies,
+          enemy_bullets$1
+        );
+      } else {
+        return create_game();
       }
     }
   );
 }
-var board_width = 100;
-var board_height = 100;
 function apply(cmd, state) {
   let spaceship;
   let enemies;
@@ -6674,12 +6741,6 @@ function apply(cmd, state) {
             width2 = enemy.width;
             enemy_x = enemy.position.x;
             enemy_y = enemy.position.y;
-            echo(
-              toList([enemy_x, width2, x, y]),
-              void 0,
-              "src/game.gleam",
-              87
-            );
             let $ = y + 1 === enemy_y && enemy_x - globalThis.Math.trunc(
               width2 / 2
             ) <= x && enemy_x + globalThis.Math.trunc(width2 / 2) >= x;
@@ -6707,26 +6768,53 @@ function apply(cmd, state) {
     );
     _block = append(
       _pipe,
-      map(
+      flat_map(
         enemy_bullets,
         (bullet) => {
+          echo(bullet, void 0, "src/game.gleam", 117);
           let x;
           let y;
           let count_down;
           count_down = bullet.count_down;
           x = bullet.position.x;
           y = bullet.position.y;
-          echo(count_down, void 0, "src/game.gleam", 112);
+          let _block$1;
           let $ = count_down === 0;
           if ($) {
-            return new EnemyBulletUpdated(
+            _block$1 = new EnemyBulletUpdated(
               new Bullet(bullet.id, new Position(x, y - 1), 5)
             );
           } else {
-            return new EnemyBulletUpdated(
+            _block$1 = new EnemyBulletUpdated(
               new Bullet(bullet.id, bullet.position, count_down - 1)
             );
           }
+          let updated = _block$1;
+          let _block$2;
+          let $1 = y < 0;
+          if ($1) {
+            _block$2 = toList([new EnemyBulletRemoved(bullet.id)]);
+          } else {
+            _block$2 = toList([]);
+          }
+          let removed_bullet = _block$2;
+          let _block$3;
+          {
+            let space_x = spaceship.position;
+            let $2 = bullet.position.y === 0 && space_x - globalThis.Math.trunc(
+              spaceship.width / 2
+            ) <= bullet.position.x && space_x + globalThis.Math.trunc(
+              spaceship.width / 2
+            ) >= bullet.position.x;
+            if ($2) {
+              _block$3 = toList([new WeDied()]);
+            } else {
+              _block$3 = toList([]);
+            }
+          }
+          let ship_hit_events = _block$3;
+          let _pipe$1 = prepend(updated, removed_bullet);
+          return append(_pipe$1, ship_hit_events);
         }
       )
     );
@@ -6741,16 +6829,6 @@ function apply(cmd, state) {
   }
   let events = _block;
   return apply_state(state, events);
-}
-var spaceship_height = 5;
-function create_game() {
-  return new Playing(
-    0,
-    new Board(board_height, board_width),
-    new Spaceship(50, toList([]), spaceship_height),
-    toList([]),
-    toList([])
-  );
 }
 function echo(value, message, file, line) {
   const grey = "\x1B[90m";
@@ -7087,7 +7165,10 @@ function update2(model, msg) {
       return [update_game(model$1, new Shoot()), none()];
     } else if (key === "e") {
       return [
-        update_game(model$1, new IntroduceEnemy(50, 50)),
+        update_game(
+          model$1,
+          new IntroduceEnemy(random(50), random(50) + 20)
+        ),
         none()
       ];
     } else {
@@ -7105,15 +7186,15 @@ function space_ship(grid_size) {
       "let_assert",
       FILEPATH4,
       "space_invaders",
-      113,
+      119,
       "space_ship",
       "Pattern match failed, no pattern matched the value.",
       {
         value: $,
-        start: 2925,
-        end: 2989,
-        pattern_start: 2936,
-        pattern_end: 2945
+        start: 3022,
+        end: 3086,
+        pattern_start: 3033,
+        pattern_end: 3042
       }
     );
   }
