@@ -90,10 +90,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
         "a" -> #(update_game(model, game.MoveLeft), effect.none())
         "d" -> #(update_game(model, game.MoveRight), effect.none())
         "s" -> #(update_game(model, game.Shoot), effect.none())
-        "e" -> #(
-          update_game(model, game.IntroduceEnemy(50, int.random(20) + 50)),
-          effect.none(),
-        )
+        "e" -> #(update_game(model, game.IntroduceEnemy(50, 50)), effect.none())
         _ -> #(model, effect.none())
       }
     }
@@ -148,7 +145,9 @@ fn render_enemies(enemies, grid_size, size) -> p.Picture {
       let enemy_x = int.to_float(x - width / 2) *. grid_size
       let enemy_y = size -. int.to_float(y) *. grid_size
 
-      p.rectangle(int.to_float(width) *. grid_size, 50.0)
+      let enemy_height = 50.0
+      p.rectangle(int.to_float(width) *. grid_size, enemy_height)
+      |> p.translate_y(-1.0 *. enemy_height)
       |> p.fill(colour.light_orange)
       |> p.translate_xy(enemy_x, enemy_y)
     })
@@ -168,6 +167,21 @@ fn render_bullets(bullets, grid_size, size) -> p.Picture {
   )
 }
 
+fn render_enemy_bullets(bullets, grid_size, size) -> p.Picture {
+  p.combine(
+    list.map(bullets, fn(bullet) {
+      let game.Position(x:, y:) = bullet
+      let bullet_x = { int.to_float(x) -. 5.0 /. 2.0 } *. grid_size
+      let bullet_y = size -. int.to_float(y) *. grid_size
+      let bullet_height = 30.0
+      p.rectangle(grid_size, bullet_height)
+      |> p.translate_y(bullet_height *. -1.0)
+      |> p.fill(colour.blue)
+      |> p.translate_xy(bullet_x +. 2.0 *. grid_size, bullet_y)
+    }),
+  )
+}
+
 // const scale = 100.0
 
 fn render_game(game: game.State) -> p.Picture {
@@ -178,16 +192,18 @@ fn render_game(game: game.State) -> p.Picture {
   let game.Playing(
     spaceship: game.Spaceship(position:, bullets:, ..),
     enemies:,
+    enemy_bullets:,
     ..,
   ) = game
 
   let spaceship_position = int.to_float(position) *. grid_size
-  echo grid_size
+  let enemy_bullets = list.map(enemy_bullets, fn(b) { b.position })
   p.combine([
     ship
       |> p.translate_xy(spaceship_position, screen_pixels -. 8.0 *. 3.0),
     render_bullets(bullets, 8.0, screen_pixels),
     render_enemies(enemies, 8.0, screen_pixels),
+    render_enemy_bullets(enemy_bullets, 8.0, screen_pixels),
     p.rectangle(2.0, 800.0)
       |> p.translate_x(800.0 /. 2.0 -. 1.0)
       |> p.fill(colour.white),

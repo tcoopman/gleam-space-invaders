@@ -1909,21 +1909,11 @@ var trim_end_regex = /* @__PURE__ */ new RegExp(`[${unicode_whitespaces}]*$`);
 function ceiling(float4) {
   return Math.ceil(float4);
 }
-function floor(float4) {
-  return Math.floor(float4);
-}
 function round2(float4) {
   return Math.round(float4);
 }
 function power(base, exponent) {
   return Math.pow(base, exponent);
-}
-function random_uniform() {
-  const random_uniform_result = Math.random();
-  if (random_uniform_result === 1) {
-    return random_uniform();
-  }
-  return random_uniform_result;
 }
 function classify_dynamic(data) {
   if (typeof data === "string") {
@@ -2065,11 +2055,6 @@ function subtract(a, b) {
 function power3(base, exponent) {
   let _pipe = identity(base);
   return power2(_pipe, exponent);
-}
-function random(max4) {
-  let _pipe = random_uniform() * identity(max4);
-  let _pipe$1 = floor(_pipe);
-  return round(_pipe$1);
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/string.mjs
@@ -2406,7 +2391,7 @@ function hsla_to_rgba(h, s, l, a) {
   let b = hue_to_rgb(h - 1 / 3, m1, m2);
   return [r, g, b, a];
 }
-function from_rgba(red2, green, blue, alpha) {
+function from_rgba(red2, green, blue2, alpha) {
   return try$(
     valid_colour_value(red2),
     (r) => {
@@ -2414,7 +2399,7 @@ function from_rgba(red2, green, blue, alpha) {
         valid_colour_value(green),
         (g) => {
           return try$(
-            valid_colour_value(blue),
+            valid_colour_value(blue2),
             (b) => {
               return try$(
                 valid_colour_value(alpha),
@@ -2742,6 +2727,12 @@ var light_orange = /* @__PURE__ */ new Rgba(
   0.9882352941176471,
   0.6862745098039216,
   0.24313725490196078,
+  1
+);
+var blue = /* @__PURE__ */ new Rgba(
+  0.20392156862745098,
+  0.396078431372549,
+  0.6431372549019608,
   1
 );
 var white = /* @__PURE__ */ new Rgba(1, 1, 1, 1);
@@ -6397,12 +6388,22 @@ var Enemy = class extends CustomType {
     this.width = width2;
   }
 };
-var Playing = class extends CustomType {
-  constructor(board, spaceship, enemies) {
+var Bullet = class extends CustomType {
+  constructor(id, position, count_down) {
     super();
+    this.id = id;
+    this.position = position;
+    this.count_down = count_down;
+  }
+};
+var Playing = class extends CustomType {
+  constructor(last_id, board, spaceship, enemies, enemy_bullets) {
+    super();
+    this.last_id = last_id;
     this.board = board;
     this.spaceship = spaceship;
     this.enemies = enemies;
+    this.enemy_bullets = enemy_bullets;
   }
 };
 var MoveLeft = class extends CustomType {
@@ -6419,6 +6420,8 @@ var IntroduceEnemy = class extends CustomType {
     this.x = x;
     this.y = y;
   }
+};
+var IdIncreased = class extends CustomType {
 };
 var BulletRemoved = class extends CustomType {
   constructor($0) {
@@ -6457,6 +6460,24 @@ var EnemyAdded = class extends CustomType {
     this[0] = $0;
   }
 };
+var EnemyMoved = class extends CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+};
+var EnemyBulletShot = class extends CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+};
+var EnemyBulletUpdated = class extends CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+};
 function apply_state(state, events) {
   return fold(
     events,
@@ -6464,11 +6485,21 @@ function apply_state(state, events) {
     (state2, event2) => {
       let spaceship;
       let enemies;
+      let enemy_bullets;
       spaceship = state2.spaceship;
       enemies = state2.enemies;
+      enemy_bullets = state2.enemy_bullets;
       let bullets;
       bullets = spaceship.bullets;
-      if (event2 instanceof BulletRemoved) {
+      if (event2 instanceof IdIncreased) {
+        return new Playing(
+          state2.last_id + 1,
+          state2.board,
+          state2.spaceship,
+          state2.enemies,
+          state2.enemy_bullets
+        );
+      } else if (event2 instanceof BulletRemoved) {
         let pos = event2[0];
         let bullets$1 = filter(
           bullets,
@@ -6477,9 +6508,11 @@ function apply_state(state, events) {
           }
         );
         return new Playing(
+          state2.last_id,
           state2.board,
           new Spaceship(spaceship.position, bullets$1, spaceship.height),
-          state2.enemies
+          state2.enemies,
+          state2.enemy_bullets
         );
       } else if (event2 instanceof EnemyDied) {
         let pos = event2[0];
@@ -6491,24 +6524,34 @@ function apply_state(state, events) {
             return !isEqual(pos, enemy_position);
           }
         );
-        return new Playing(state2.board, state2.spaceship, enemies$1);
+        return new Playing(
+          state2.last_id,
+          state2.board,
+          state2.spaceship,
+          enemies$1,
+          state2.enemy_bullets
+        );
       } else if (event2 instanceof ShipMoved) {
         let pos = event2[0];
         return new Playing(
+          state2.last_id,
           state2.board,
           new Spaceship(pos, spaceship.bullets, spaceship.height),
-          state2.enemies
+          state2.enemies,
+          state2.enemy_bullets
         );
       } else if (event2 instanceof BulletShot) {
         let bullet = event2[0];
         return new Playing(
+          state2.last_id,
           state2.board,
           new Spaceship(
             spaceship.position,
             prepend(bullet, bullets),
             spaceship.height
           ),
-          state2.enemies
+          state2.enemies,
+          state2.enemy_bullets
         );
       } else if (event2 instanceof BulletMoved) {
         let from = event2.from;
@@ -6525,26 +6568,59 @@ function apply_state(state, events) {
           }
         );
         return new Playing(
+          state2.last_id,
           state2.board,
           new Spaceship(spaceship.position, bullets$1, spaceship.height),
-          state2.enemies
+          state2.enemies,
+          state2.enemy_bullets
         );
       } else if (event2 instanceof EnemyAdded) {
         let enemy = event2[0];
         return new Playing(
+          state2.last_id,
           state2.board,
           state2.spaceship,
-          prepend(enemy, enemies)
+          prepend(enemy, enemies),
+          state2.enemy_bullets
         );
-      } else {
+      } else if (event2 instanceof EnemyMoved) {
         throw makeError(
           "todo",
           FILEPATH3,
           "game",
-          138,
+          187,
           "apply_state",
           "`todo` expression evaluated. This code has not yet been implemented.",
           {}
+        );
+      } else if (event2 instanceof EnemyBulletShot) {
+        let bullet = event2[0];
+        return new Playing(
+          state2.last_id,
+          state2.board,
+          state2.spaceship,
+          state2.enemies,
+          prepend(bullet, enemy_bullets)
+        );
+      } else {
+        let bullet = event2[0];
+        let enemy_bullets$1 = map(
+          enemy_bullets,
+          (b) => {
+            let $ = bullet.id === b.id;
+            if ($) {
+              return bullet;
+            } else {
+              return b;
+            }
+          }
+        );
+        return new Playing(
+          state2.last_id,
+          state2.board,
+          state2.spaceship,
+          state2.enemies,
+          enemy_bullets$1
         );
       }
     }
@@ -6555,8 +6631,10 @@ var board_height = 100;
 function apply(cmd, state) {
   let spaceship;
   let enemies;
+  let enemy_bullets;
   spaceship = state.spaceship;
   enemies = state.enemies;
+  enemy_bullets = state.enemy_bullets;
   let _block;
   if (cmd instanceof MoveLeft) {
     let $ = spaceship.position;
@@ -6580,7 +6658,7 @@ function apply(cmd, state) {
     _block = toList([new BulletShot(new Position(position, height2))]);
   } else if (cmd instanceof Tick2) {
     let bullets = spaceship.bullets;
-    _block = flat_map(
+    let _pipe = flat_map(
       bullets,
       (bullet) => {
         let x;
@@ -6600,7 +6678,7 @@ function apply(cmd, state) {
               toList([enemy_x, width2, x, y]),
               void 0,
               "src/game.gleam",
-              72
+              87
             );
             let $ = y + 1 === enemy_y && enemy_x - globalThis.Math.trunc(
               width2 / 2
@@ -6627,10 +6705,39 @@ function apply(cmd, state) {
         return append(enemies_hit, bullet_events);
       }
     );
+    _block = append(
+      _pipe,
+      map(
+        enemy_bullets,
+        (bullet) => {
+          let x;
+          let y;
+          let count_down;
+          count_down = bullet.count_down;
+          x = bullet.position.x;
+          y = bullet.position.y;
+          echo(count_down, void 0, "src/game.gleam", 112);
+          let $ = count_down === 0;
+          if ($) {
+            return new EnemyBulletUpdated(
+              new Bullet(bullet.id, new Position(x, y - 1), 5)
+            );
+          } else {
+            return new EnemyBulletUpdated(
+              new Bullet(bullet.id, bullet.position, count_down - 1)
+            );
+          }
+        }
+      )
+    );
   } else {
     let x = cmd.x;
     let y = cmd.y;
-    _block = toList([new EnemyAdded(new Enemy(new Position(x, y), 6))]);
+    _block = toList([
+      new EnemyAdded(new Enemy(new Position(x, y), 6)),
+      new EnemyBulletShot(new Bullet(state.last_id, new Position(x, y), 0)),
+      new IdIncreased()
+    ]);
   }
   let events = _block;
   return apply_state(state, events);
@@ -6638,8 +6745,10 @@ function apply(cmd, state) {
 var spaceship_height = 5;
 function create_game() {
   return new Playing(
+    0,
     new Board(board_height, board_width),
     new Spaceship(50, toList([]), spaceship_height),
+    toList([]),
     toList([])
   );
 }
@@ -6978,7 +7087,7 @@ function update2(model, msg) {
       return [update_game(model$1, new Shoot()), none()];
     } else if (key === "e") {
       return [
-        update_game(model$1, new IntroduceEnemy(50, random(20) + 50)),
+        update_game(model$1, new IntroduceEnemy(50, 50)),
         none()
       ];
     } else {
@@ -6996,15 +7105,15 @@ function space_ship(grid_size) {
       "let_assert",
       FILEPATH4,
       "space_invaders",
-      116,
+      113,
       "space_ship",
       "Pattern match failed, no pattern matched the value.",
       {
         value: $,
-        start: 2973,
-        end: 3037,
-        pattern_start: 2984,
-        pattern_end: 2993
+        start: 2925,
+        end: 2989,
+        pattern_start: 2936,
+        pattern_end: 2945
       }
     );
   }
@@ -7055,9 +7164,11 @@ function render_enemies(enemies, grid_size, size3) {
         y = enemy.position.y;
         let enemy_x = identity(x - globalThis.Math.trunc(width2 / 2)) * grid_size;
         let enemy_y = size3 - identity(y) * grid_size;
-        let _pipe = rectangle(identity(width2) * grid_size, 50);
-        let _pipe$1 = fill(_pipe, light_orange);
-        return translate_xy(_pipe$1, enemy_x, enemy_y);
+        let enemy_height = 50;
+        let _pipe = rectangle(identity(width2) * grid_size, enemy_height);
+        let _pipe$1 = translate_y(_pipe, -1 * enemy_height);
+        let _pipe$2 = fill(_pipe$1, light_orange);
+        return translate_xy(_pipe$2, enemy_x, enemy_y);
       }
     )
   );
@@ -7080,6 +7191,26 @@ function render_bullets(bullets, grid_size, size3) {
     )
   );
 }
+function render_enemy_bullets(bullets, grid_size, size3) {
+  return combine(
+    map(
+      bullets,
+      (bullet) => {
+        let x;
+        let y;
+        x = bullet.x;
+        y = bullet.y;
+        let bullet_x = (identity(x) - 5 / 2) * grid_size;
+        let bullet_y = size3 - identity(y) * grid_size;
+        let bullet_height = 30;
+        let _pipe = rectangle(grid_size, bullet_height);
+        let _pipe$1 = translate_y(_pipe, bullet_height * -1);
+        let _pipe$2 = fill(_pipe$1, blue);
+        return translate_xy(_pipe$2, bullet_x + 2 * grid_size, bullet_y);
+      }
+    )
+  );
+}
 var max3 = 100;
 var size2 = 800;
 function render_game(game) {
@@ -7089,11 +7220,15 @@ function render_game(game) {
   let position;
   let bullets;
   let enemies;
+  let enemy_bullets;
   enemies = game.enemies;
+  enemy_bullets = game.enemy_bullets;
   position = game.spaceship.position;
   bullets = game.spaceship.bullets;
   let spaceship_position = identity(position) * grid_size;
-  echo2(grid_size, void 0, "src/space_invaders.gleam", 185);
+  let enemy_bullets$1 = map(enemy_bullets, (b) => {
+    return b.position;
+  });
   return combine(
     toList([
       (() => {
@@ -7106,6 +7241,7 @@ function render_game(game) {
       })(),
       render_bullets(bullets, 8, screen_pixels),
       render_enemies(enemies, 8, screen_pixels),
+      render_enemy_bullets(enemy_bullets$1, 8, screen_pixels),
       (() => {
         let _pipe = rectangle(2, 800);
         let _pipe$1 = translate_x(_pipe, 800 / 2 - 1);
@@ -7193,209 +7329,6 @@ function main() {
   );
   return void 0;
 }
-function echo2(value, message, file, line) {
-  const grey = "\x1B[90m";
-  const reset_color = "\x1B[39m";
-  const file_line = `${file}:${line}`;
-  const inspector = new Echo$Inspector2();
-  const string_value = inspector.inspect(value);
-  const string_message = message === void 0 ? "" : " " + message;
-  if (globalThis.process?.stderr?.write) {
-    const string5 = `${grey}${file_line}${reset_color}${string_message}
-${string_value}
-`;
-    globalThis.process.stderr.write(string5);
-  } else if (globalThis.Deno) {
-    const string5 = `${grey}${file_line}${reset_color}${string_message}
-${string_value}
-`;
-    globalThis.Deno.stderr.writeSync(new TextEncoder().encode(string5));
-  } else {
-    const string5 = `${file_line}
-${string_value}`;
-    globalThis.console.log(string5);
-  }
-  return value;
-}
-var Echo$Inspector2 = class {
-  #references = /* @__PURE__ */ new Set();
-  #isDict(value) {
-    try {
-      return value instanceof Dict;
-    } catch {
-      return false;
-    }
-  }
-  #float(float4) {
-    const string5 = float4.toString().replace("+", "");
-    if (string5.indexOf(".") >= 0) {
-      return string5;
-    } else {
-      const index4 = string5.indexOf("e");
-      if (index4 >= 0) {
-        return string5.slice(0, index4) + ".0" + string5.slice(index4);
-      } else {
-        return string5 + ".0";
-      }
-    }
-  }
-  inspect(v) {
-    const t = typeof v;
-    if (v === true) return "True";
-    if (v === false) return "False";
-    if (v === null) return "//js(null)";
-    if (v === void 0) return "Nil";
-    if (t === "string") return this.#string(v);
-    if (t === "bigint" || Number.isInteger(v)) return v.toString();
-    if (t === "number") return this.#float(v);
-    if (v instanceof UtfCodepoint) return this.#utfCodepoint(v);
-    if (v instanceof BitArray) return this.#bit_array(v);
-    if (v instanceof RegExp) return `//js(${v})`;
-    if (v instanceof Date) return `//js(Date("${v.toISOString()}"))`;
-    if (v instanceof globalThis.Error) return `//js(${v.toString()})`;
-    if (v instanceof Function) {
-      const args = [];
-      for (const i of Array(v.length).keys())
-        args.push(String.fromCharCode(i + 97));
-      return `//fn(${args.join(", ")}) { ... }`;
-    }
-    if (this.#references.size === this.#references.add(v).size) {
-      return "//js(circular reference)";
-    }
-    let printed;
-    if (Array.isArray(v)) {
-      printed = `#(${v.map((v2) => this.inspect(v2)).join(", ")})`;
-    } else if (v instanceof List) {
-      printed = this.#list(v);
-    } else if (v instanceof CustomType) {
-      printed = this.#customType(v);
-    } else if (this.#isDict(v)) {
-      printed = this.#dict(v);
-    } else if (v instanceof Set) {
-      return `//js(Set(${[...v].map((v2) => this.inspect(v2)).join(", ")}))`;
-    } else {
-      printed = this.#object(v);
-    }
-    this.#references.delete(v);
-    return printed;
-  }
-  #object(v) {
-    const name = Object.getPrototypeOf(v)?.constructor?.name || "Object";
-    const props = [];
-    for (const k of Object.keys(v)) {
-      props.push(`${this.inspect(k)}: ${this.inspect(v[k])}`);
-    }
-    const body = props.length ? " " + props.join(", ") + " " : "";
-    const head = name === "Object" ? "" : name + " ";
-    return `//js(${head}{${body}})`;
-  }
-  #dict(map3) {
-    let body = "dict.from_list([";
-    let first = true;
-    let key_value_pairs = [];
-    map3.forEach((value, key) => {
-      key_value_pairs.push([key, value]);
-    });
-    key_value_pairs.sort();
-    key_value_pairs.forEach(([key, value]) => {
-      if (!first) body = body + ", ";
-      body = body + "#(" + this.inspect(key) + ", " + this.inspect(value) + ")";
-      first = false;
-    });
-    return body + "])";
-  }
-  #customType(record) {
-    const props = Object.keys(record).map((label) => {
-      const value = this.inspect(record[label]);
-      return isNaN(parseInt(label)) ? `${label}: ${value}` : value;
-    }).join(", ");
-    return props ? `${record.constructor.name}(${props})` : record.constructor.name;
-  }
-  #list(list4) {
-    if (list4 instanceof Empty) {
-      return "[]";
-    }
-    let char_out = 'charlist.from_string("';
-    let list_out = "[";
-    let current = list4;
-    while (current instanceof NonEmpty) {
-      let element4 = current.head;
-      current = current.tail;
-      if (list_out !== "[") {
-        list_out += ", ";
-      }
-      list_out += this.inspect(element4);
-      if (char_out) {
-        if (Number.isInteger(element4) && element4 >= 32 && element4 <= 126) {
-          char_out += String.fromCharCode(element4);
-        } else {
-          char_out = null;
-        }
-      }
-    }
-    if (char_out) {
-      return char_out + '")';
-    } else {
-      return list_out + "]";
-    }
-  }
-  #string(str) {
-    let new_str = '"';
-    for (let i = 0; i < str.length; i++) {
-      const char = str[i];
-      switch (char) {
-        case "\n":
-          new_str += "\\n";
-          break;
-        case "\r":
-          new_str += "\\r";
-          break;
-        case "	":
-          new_str += "\\t";
-          break;
-        case "\f":
-          new_str += "\\f";
-          break;
-        case "\\":
-          new_str += "\\\\";
-          break;
-        case '"':
-          new_str += '\\"';
-          break;
-        default:
-          if (char < " " || char > "~" && char < "\xA0") {
-            new_str += "\\u{" + char.charCodeAt(0).toString(16).toUpperCase().padStart(4, "0") + "}";
-          } else {
-            new_str += char;
-          }
-      }
-    }
-    new_str += '"';
-    return new_str;
-  }
-  #utfCodepoint(codepoint2) {
-    return `//utfcodepoint(${String.fromCodePoint(codepoint2.value)})`;
-  }
-  #bit_array(bits) {
-    if (bits.bitSize === 0) {
-      return "<<>>";
-    }
-    let acc = "<<";
-    for (let i = 0; i < bits.byteSize - 1; i++) {
-      acc += bits.byteAt(i).toString();
-      acc += ", ";
-    }
-    if (bits.byteSize * 8 === bits.bitSize) {
-      acc += bits.byteAt(bits.byteSize - 1).toString();
-    } else {
-      const trailingBitsCount = bits.bitSize % 8;
-      acc += bits.byteAt(bits.byteSize - 1) >> 8 - trailingBitsCount;
-      acc += `:size(${trailingBitsCount})`;
-    }
-    acc += ">>";
-    return acc;
-  }
-};
 
 // build/.lustre/entry.mjs
 main();
