@@ -1951,11 +1951,21 @@ var trim_end_regex = /* @__PURE__ */ new RegExp(`[${unicode_whitespaces}]*$`);
 function ceiling(float4) {
   return Math.ceil(float4);
 }
+function floor(float4) {
+  return Math.floor(float4);
+}
 function round2(float4) {
   return Math.round(float4);
 }
 function power(base, exponent) {
   return Math.pow(base, exponent);
+}
+function random_uniform() {
+  const random_uniform_result = Math.random();
+  if (random_uniform_result === 1) {
+    return random_uniform();
+  }
+  return random_uniform_result;
 }
 function classify_dynamic(data) {
   if (typeof data === "string") {
@@ -2097,6 +2107,11 @@ function subtract(a, b) {
 function power3(base, exponent) {
   let _pipe = identity(base);
   return power2(_pipe, exponent);
+}
+function random(max4) {
+  let _pipe = random_uniform() * identity(max4);
+  let _pipe$1 = floor(_pipe);
+  return round(_pipe$1);
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/string.mjs
@@ -2433,9 +2448,9 @@ function hsla_to_rgba(h, s, l, a) {
   let b = hue_to_rgb(h - 1 / 3, m1, m2);
   return [r, g, b, a];
 }
-function from_rgba(red, green, blue, alpha) {
+function from_rgba(red2, green, blue, alpha) {
   return try$(
-    valid_colour_value(red),
+    valid_colour_value(red2),
     (r) => {
       return try$(
         valid_colour_value(green),
@@ -2764,12 +2779,7 @@ function hsla_decoder() {
 function decoder() {
   return one_of(rgba_decoder(), toList([hsla_decoder()]));
 }
-var light_red = /* @__PURE__ */ new Rgba(
-  0.9372549019607843,
-  0.1607843137254902,
-  0.1607843137254902,
-  1
-);
+var red = /* @__PURE__ */ new Rgba(0.8, 0, 0, 1);
 var light_orange = /* @__PURE__ */ new Rgba(
   0.9882352941176471,
   0.6862745098039216,
@@ -6654,15 +6664,15 @@ function update_game(model, cmd) {
       "let_assert",
       FILEPATH3,
       "space_invaders",
-      62,
+      64,
       "update_game",
       "Pattern match failed, no pattern matched the value.",
       {
         value: model,
-        start: 1543,
-        end: 1578,
-        pattern_start: 1554,
-        pattern_end: 1570
+        start: 1561,
+        end: 1596,
+        pattern_start: 1572,
+        pattern_end: 1588
       }
     );
   }
@@ -6703,15 +6713,15 @@ function update2(model, msg) {
       "let_assert",
       FILEPATH3,
       "space_invaders",
-      71,
+      73,
       "update",
       "Pattern match failed, no pattern matched the value.",
       {
         value: model$1,
-        start: 1785,
-        end: 1813,
-        pattern_start: 1796,
-        pattern_end: 1805
+        start: 1803,
+        end: 1831,
+        pattern_start: 1814,
+        pattern_end: 1823
       }
     );
   }
@@ -6738,10 +6748,10 @@ function update2(model, msg) {
         "Pattern match failed, no pattern matched the value.",
         {
           value: model$2,
-          start: 2197,
-          end: 2225,
-          pattern_start: 2208,
-          pattern_end: 2217
+          start: 2093,
+          end: 2121,
+          pattern_start: 2104,
+          pattern_end: 2113
         }
       );
     }
@@ -6756,7 +6766,10 @@ function update2(model, msg) {
       return [update_game(model$1, new Shoot()), none()];
     } else if (key === "e") {
       return [
-        update_game(model$1, new IntroduceEnemy(50, 50)),
+        update_game(
+          model$1,
+          new IntroduceEnemy(random(100), random(20) + 50)
+        ),
         none()
       ];
     } else {
@@ -6774,15 +6787,15 @@ function space_ship(side) {
       "let_assert",
       FILEPATH3,
       "space_invaders",
-      117,
+      121,
       "space_ship",
       "Pattern match failed, no pattern matched the value.",
       {
         value: $,
-        start: 3097,
-        end: 3161,
-        pattern_start: 3108,
-        pattern_end: 3117
+        start: 3069,
+        end: 3133,
+        pattern_start: 3080,
+        pattern_end: 3089
       }
     );
   }
@@ -6818,6 +6831,44 @@ function canvas(picture, attributes) {
     toList([])
   );
 }
+function render_enemies(enemies, side_size, size3) {
+  return combine(
+    map(
+      enemies,
+      (enemy) => {
+        let x;
+        let y;
+        let width2;
+        width2 = enemy.width;
+        x = enemy.position.x;
+        y = enemy.position.y;
+        let enemy_x = identity(x) * side_size;
+        let enemy_y = size3 - identity(y) * side_size;
+        let _pipe = rectangle(identity(width2) * side_size, 50);
+        let _pipe$1 = fill(_pipe, light_orange);
+        return translate_xy(_pipe$1, enemy_x, enemy_y);
+      }
+    )
+  );
+}
+function render_bullets(bullets, side_size, size3) {
+  return combine(
+    map(
+      bullets,
+      (bullet) => {
+        let x;
+        let y;
+        x = bullet.x;
+        y = bullet.y;
+        let bullet_x = identity(x) * side_size;
+        let bullet_y = size3 - identity(y) * side_size;
+        let _pipe = rectangle(side_size, 30);
+        let _pipe$1 = fill(_pipe, red);
+        return translate_xy(_pipe$1, bullet_x + 2 * side_size, bullet_y);
+      }
+    )
+  );
+}
 var max3 = 100;
 var size2 = 800;
 function render_game(game) {
@@ -6831,41 +6882,9 @@ function render_game(game) {
   enemies = game.enemies;
   position = game.spaceship.position;
   bullets = game.spaceship.bullets;
-  let red = light_red;
   let spaceship_position = identity(position) * side_size;
-  let rendered_bullets = map(
-    bullets,
-    (bullet) => {
-      let x;
-      let y;
-      x = bullet.x;
-      y = bullet.y;
-      let bullet_x = identity(x) * side_size;
-      let bullet_y = size$1 - identity(y) * side_size;
-      let _pipe = rectangle(side_size, 30);
-      let _pipe$1 = fill(_pipe, red);
-      let _pipe$2 = translate_x(_pipe$1, bullet_x + 2 * side_size);
-      return translate_y(_pipe$2, bullet_y);
-    }
-  );
-  let rendered_enemies = map(
-    enemies,
-    (enemy) => {
-      let x;
-      let y;
-      let width2;
-      width2 = enemy.width;
-      x = enemy.position.x;
-      y = enemy.position.y;
-      let enemy_x = identity(x) * side_size;
-      let enemy_y = size$1 - identity(y) * side_size;
-      let _pipe = rectangle(identity(width2) * side_size, 50);
-      let _pipe$1 = fill(_pipe, light_orange);
-      return translate_xy(_pipe$1, enemy_x, enemy_y);
-    }
-  );
   return combine(
-    prepend(
+    toList([
       (() => {
         let _pipe = ship;
         return translate_xy(
@@ -6874,8 +6893,9 @@ function render_game(game) {
           size$1 - side_size * 3
         );
       })(),
-      append(rendered_bullets, rendered_enemies)
-    )
+      render_bullets(bullets, side_size, size$1),
+      render_enemies(enemies, side_size, size$1)
+    ])
   );
 }
 function view(model) {
@@ -6911,10 +6931,10 @@ function main() {
       "let_assert",
       FILEPATH3,
       "space_invaders",
-      29,
+      31,
       "main",
       "Pattern match failed, no pattern matched the value.",
-      { value: $, start: 733, end: 788, pattern_start: 744, pattern_end: 755 }
+      { value: $, start: 751, end: 806, pattern_start: 762, pattern_end: 773 }
     );
   }
   addGlobalEventListener(
@@ -6937,15 +6957,15 @@ function main() {
           "let_assert",
           FILEPATH3,
           "space_invaders",
-          36,
+          38,
           "main",
           "Pattern match failed, no pattern matched the value.",
           {
             value: result,
-            start: 979,
-            end: 1008,
-            pattern_start: 990,
-            pattern_end: 999
+            start: 997,
+            end: 1026,
+            pattern_start: 1008,
+            pattern_end: 1017
           }
         );
       }

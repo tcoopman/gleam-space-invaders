@@ -23,6 +23,8 @@ fn add_event_listener(name: String, handler: fn(Dynamic) -> any) -> Nil
 // MAIN ------------------------------------------------------------------------
 const max = 100.0
 
+const size = 800
+
 pub fn main() {
   canvas.define_web_component()
   let app = lustre.application(init, update, view)
@@ -73,8 +75,6 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case msg {
     Tick(current_time) -> {
       let frame_time = calc_frame_time(model, current_time)
-      // Since division by 0 is illegal the division function
-      // returns a Result type we need to pattern match on.
       let fps = case float.divide(1000.0, frame_time) {
         Ok(fps) -> fps
         _ -> 60.0
@@ -91,7 +91,13 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
         "a" -> #(update_game(model, game.MoveLeft), effect.none())
         "d" -> #(update_game(model, game.MoveRight), effect.none())
         "s" -> #(update_game(model, game.Shoot), effect.none())
-        "e" -> #(update_game(model, game.IntroduceEnemy(50, 50)), effect.none())
+        "e" -> #(
+          update_game(
+            model,
+            game.IntroduceEnemy(int.random(100), int.random(20) + 50),
+          ),
+          effect.none(),
+        )
         _ -> #(model, effect.none())
       }
     }
@@ -111,9 +117,7 @@ fn schedule_next_frame() {
   })
 }
 
-const size = 800
-
-pub fn space_ship(side) -> p.Picture {
+fn space_ship(side) -> p.Picture {
   let assert Ok(green) = colour.from_rgba_hex_string("#00CCC00FF")
 
   p.combine([
@@ -140,6 +144,32 @@ fn canvas(picture: p.Picture, attributes: List(attribute.Attribute(a))) {
   )
 }
 
+fn render_enemies(enemies, side_size, size) -> p.Picture {
+  p.combine({
+    list.map(enemies, fn(enemy) {
+      let game.Enemy(position: game.Position(x:, y:), width:) = enemy
+      let enemy_x = int.to_float(x) *. side_size
+      let enemy_y = size -. int.to_float(y) *. side_size
+      p.rectangle(int.to_float(width) *. side_size, 50.0)
+      |> p.fill(colour.light_orange)
+      |> p.translate_xy(enemy_x, enemy_y)
+    })
+  })
+}
+
+fn render_bullets(bullets, side_size, size) -> p.Picture {
+  p.combine(
+    list.map(bullets, fn(bullet) {
+      let game.Position(x:, y:) = bullet
+      let bullet_x = int.to_float(x) *. side_size
+      let bullet_y = size -. int.to_float(y) *. side_size
+      p.rectangle(side_size, 30.0)
+      |> p.fill(colour.red)
+      |> p.translate_xy(bullet_x +. 2.0 *. side_size, bullet_y)
+    }),
+  )
+}
+
 // const scale = 100.0
 
 fn render_game(game: game.State) -> p.Picture {
@@ -154,33 +184,12 @@ fn render_game(game: game.State) -> p.Picture {
     ..,
   ) = game
 
-  let red = colour.light_red
   let spaceship_position = int.to_float(position) *. side_size
-  let rendered_bullets =
-    list.map(bullets, fn(bullet) {
-      let game.Position(x:, y:) = bullet
-      let bullet_x = int.to_float(x) *. side_size
-      let bullet_y = size -. int.to_float(y) *. side_size
-      p.rectangle(side_size, 30.0)
-      |> p.fill(red)
-      |> p.translate_x(bullet_x +. 2.0 *. side_size)
-      |> p.translate_y(bullet_y)
-    })
-
-  let rendered_enemies =
-    list.map(enemies, fn(enemy) {
-      let game.Enemy(position: game.Position(x:, y:), width:) = enemy
-      let enemy_x = int.to_float(x) *. side_size
-      let enemy_y = size -. int.to_float(y) *. side_size
-      p.rectangle(int.to_float(width) *. side_size, 50.0)
-      |> p.fill(colour.light_orange)
-      |> p.translate_xy(enemy_x, enemy_y)
-    })
-
   p.combine([
     ship
       |> p.translate_xy(spaceship_position, size -. side_size *. 3.0),
-    ..list.append(rendered_bullets, rendered_enemies)
+    render_bullets(bullets, side_size, size),
+    render_enemies(enemies, side_size, size),
   ])
 }
 
