@@ -1,4 +1,5 @@
 import engine
+import game
 import gleam/dynamic.{type Dynamic}
 import gleam/dynamic/decode
 import gleam/float
@@ -19,7 +20,7 @@ import paint/encode
 fn add_event_listener(name: String, handler: fn(Dynamic) -> any) -> Nil
 
 // MAIN ------------------------------------------------------------------------
-const max = 40.0
+const max = 100.0
 
 pub fn main() {
   canvas.define_web_component()
@@ -42,7 +43,7 @@ pub fn main() {
 // MODEL -----------------------------------------------------------------------
 type Model {
   Idle
-  Ready(previous_time: Float, fps: Float, x: Float)
+  Ready(previous_time: Float, fps: Float, x: Float, game: game.State)
 }
 
 fn init(_) -> #(Model, Effect(Msg)) {
@@ -56,7 +57,18 @@ type Msg {
   UserPressedKey(key: String)
 }
 
+fn update_game(model: Model, cmd: game.Command) -> Model {
+  let assert Ready(game:, ..) = model
+  Ready(..model, game: game.apply(cmd, game))
+}
+
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
+  let model = case model {
+    Idle -> Ready(0.0, 0.0, 0.0, game.create_game())
+    _ -> model
+  }
+  let assert Ready(..) = model
+
   case msg {
     Tick(current_time) -> {
       let frame_time = calc_frame_time(model, current_time)
@@ -67,13 +79,16 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
         _ -> 60.0
       }
       #(
-        Ready(previous_time: current_time, fps: fps, x: max),
+        Ready(..model, previous_time: current_time, fps: fps, x: max),
         schedule_next_frame(),
       )
     }
     UserPressedKey(key) -> {
-      echo key
-      #(model, schedule_next_frame())
+      case key {
+        "a" -> #(update_game(model, game.MoveLeft), effect.none())
+        "d" -> #(update_game(model, game.MoveRight), effect.none())
+        _ -> #(model, effect.none())
+      }
     }
   }
 }
@@ -122,13 +137,14 @@ fn canvas(picture: p.Picture, attributes: List(attribute.Attribute(a))) {
 
 // const scale = 100.0
 
-fn game(x: Float) -> p.Picture {
+fn render_game(game: game.State) -> p.Picture {
   let size = int.to_float(size)
   let steps = max +. 5.0
   let side_size = size /. steps
 
   let ship = space_ship(side_size)
-  let position = x *. side_size
+  let game.Playing(spaceship: game.Spaceship(position:, ..)) = game
+  let position = int.to_float(position) *. side_size
 
   ship
   |> p.translate_xy(position, size -. side_size *. 3.0)
@@ -140,9 +156,9 @@ fn game(x: Float) -> p.Picture {
 fn view(model: Model) -> Element(Msg) {
   case model {
     Idle -> html.p([], [html.text("Initializing")])
-    Ready(_previous_time, _fps, x) -> {
+    Ready(_previous_time, _fps, x, game) -> {
       html.div([], [
-        canvas(game(x), [
+        canvas(render_game(game), [
           attribute.height(size),
           attribute.width(size),
           attribute.style("background", "black"),
@@ -157,7 +173,7 @@ fn view(model: Model) -> Element(Msg) {
 fn render_debugger(model: Model) {
   case model {
     Idle -> html.p([], [html.text("Initializing")])
-    Ready(previous_time, fps, x) -> {
+    Ready(previous_time, fps, x, ..) -> {
       html.p([], [
         float.to_string(previous_time) |> html.text,
         html.text(" • x:"),
