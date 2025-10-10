@@ -9,7 +9,8 @@ import lustre/attribute
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
-import lustre/event
+
+// import lustre/event
 import paint as p
 import paint/canvas
 import paint/encode
