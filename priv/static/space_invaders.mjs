@@ -257,6 +257,11 @@ function bitArrayByteAt(buffer, bitOffset, index4) {
     return a | b;
   }
 }
+var UtfCodepoint = class {
+  constructor(value) {
+    this.value = value;
+  }
+};
 var isBitArrayDeprecationMessagePrinted = {};
 function bitArrayPrintDeprecationWarning(name, message) {
   if (isBitArrayDeprecationMessagePrinted[name]) {
@@ -1146,34 +1151,6 @@ function filter_loop(loop$list, loop$fun, loop$acc) {
 function filter(list4, predicate) {
   return filter_loop(list4, predicate, toList([]));
 }
-function filter_map_loop(loop$list, loop$fun, loop$acc) {
-  while (true) {
-    let list4 = loop$list;
-    let fun = loop$fun;
-    let acc = loop$acc;
-    if (list4 instanceof Empty) {
-      return reverse(acc);
-    } else {
-      let first$1 = list4.head;
-      let rest$1 = list4.tail;
-      let _block;
-      let $ = fun(first$1);
-      if ($ instanceof Ok) {
-        let first$2 = $[0];
-        _block = prepend(first$2, acc);
-      } else {
-        _block = acc;
-      }
-      let new_acc = _block;
-      loop$list = rest$1;
-      loop$fun = fun;
-      loop$acc = new_acc;
-    }
-  }
-}
-function filter_map(list4, fun) {
-  return filter_map_loop(list4, fun, toList([]));
-}
 function map_loop(loop$list, loop$fun, loop$acc) {
   while (true) {
     let list4 = loop$list;
@@ -1266,25 +1243,6 @@ function index_fold_loop(loop$over, loop$acc, loop$with, loop$index) {
 }
 function index_fold(list4, initial, fun) {
   return index_fold_loop(list4, initial, fun, 0);
-}
-function any(loop$list, loop$predicate) {
-  while (true) {
-    let list4 = loop$list;
-    let predicate = loop$predicate;
-    if (list4 instanceof Empty) {
-      return false;
-    } else {
-      let first$1 = list4.head;
-      let rest$1 = list4.tail;
-      let $ = predicate(first$1);
-      if ($) {
-        return $;
-      } else {
-        loop$list = rest$1;
-        loop$predicate = predicate;
-      }
-    }
-  }
 }
 function sequences(loop$list, loop$compare, loop$growing, loop$direction, loop$prev, loop$acc) {
   while (true) {
@@ -6412,6 +6370,7 @@ function request_animation_frame(callback) {
 }
 
 // build/dev/javascript/space_invaders/game.mjs
+var FILEPATH3 = "src/game.gleam";
 var Position = class extends CustomType {
   constructor(x, y) {
     super();
@@ -6476,6 +6435,125 @@ var EnemyDied = class extends CustomType {
     this[0] = $0;
   }
 };
+var ShipMoved = class extends CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+};
+var BulletShot = class extends CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+};
+var BulletMoved = class extends CustomType {
+  constructor(from2, to) {
+    super();
+    this.from = from2;
+    this.to = to;
+  }
+};
+var EnemyAdded = class extends CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+};
+function apply_state(state, events) {
+  echo(events, void 0, "src/game.gleam", 102);
+  return fold(
+    events,
+    state,
+    (state2, event2) => {
+      let spaceship;
+      let enemies;
+      spaceship = state2.spaceship;
+      enemies = state2.enemies;
+      let bullets;
+      bullets = spaceship.bullets;
+      if (event2 instanceof BulletRemoved) {
+        let pos = event2[0];
+        let bullets$1 = filter(
+          bullets,
+          (bullet) => {
+            return !isEqual(bullet, pos);
+          }
+        );
+        return new Playing(
+          state2.board,
+          new Spaceship(spaceship.position, bullets$1, spaceship.height),
+          state2.enemies
+        );
+      } else if (event2 instanceof EnemyDied) {
+        let pos = event2[0];
+        let enemies$1 = filter(
+          enemies,
+          (enemy) => {
+            let enemy_position;
+            enemy_position = enemy.position;
+            return !isEqual(pos, enemy_position);
+          }
+        );
+        return new Playing(state2.board, state2.spaceship, enemies$1);
+      } else if (event2 instanceof ShipMoved) {
+        let pos = event2[0];
+        return new Playing(
+          state2.board,
+          new Spaceship(pos, spaceship.bullets, spaceship.height),
+          state2.enemies
+        );
+      } else if (event2 instanceof BulletShot) {
+        let bullet = event2[0];
+        return new Playing(
+          state2.board,
+          new Spaceship(
+            spaceship.position,
+            prepend(bullet, bullets),
+            spaceship.height
+          ),
+          state2.enemies
+        );
+      } else if (event2 instanceof BulletMoved) {
+        let from2 = event2.from;
+        let to = event2.to;
+        let bullets$1 = map(
+          bullets,
+          (bullet) => {
+            let $ = isEqual(bullet, from2);
+            if ($) {
+              return to;
+            } else {
+              return bullet;
+            }
+          }
+        );
+        return new Playing(
+          state2.board,
+          new Spaceship(spaceship.position, bullets$1, spaceship.height),
+          state2.enemies
+        );
+      } else if (event2 instanceof EnemyAdded) {
+        let enemy = event2[0];
+        return new Playing(
+          state2.board,
+          state2.spaceship,
+          prepend(enemy, enemies)
+        );
+      } else {
+        throw makeError(
+          "todo",
+          FILEPATH3,
+          "game",
+          139,
+          "apply_state",
+          "`todo` expression evaluated. This code has not yet been implemented.",
+          {}
+        );
+      }
+    }
+  );
+}
 var board_width = 100;
 var board_height = 100;
 function apply(cmd, state) {
@@ -6483,48 +6561,32 @@ function apply(cmd, state) {
   let enemies;
   spaceship = state.spaceship;
   enemies = state.enemies;
+  let _block;
   if (cmd instanceof MoveLeft) {
     let $ = spaceship.position;
     if ($ === 0) {
-      return new Playing(state.board, spaceship, state.enemies);
+      _block = toList([]);
     } else {
       let position = $;
-      return new Playing(
-        state.board,
-        new Spaceship(position - 1, spaceship.bullets, spaceship.height),
-        state.enemies
-      );
+      _block = toList([new ShipMoved(position - 1)]);
     }
   } else if (cmd instanceof MoveRight) {
     let position = spaceship.position;
     if (position === 100) {
-      return new Playing(state.board, spaceship, state.enemies);
+      _block = toList([]);
     } else {
       let position$1 = spaceship.position;
-      return new Playing(
-        state.board,
-        new Spaceship(position$1 + 1, spaceship.bullets, spaceship.height),
-        state.enemies
-      );
+      _block = toList([new ShipMoved(position$1 + 1)]);
     }
   } else if (cmd instanceof Shoot) {
     let position = spaceship.position;
-    let bullets = spaceship.bullets;
     let height2 = spaceship.height;
-    return new Playing(
-      state.board,
-      new Spaceship(
-        spaceship.position,
-        prepend(new Position(position, height2), bullets),
-        spaceship.height
-      ),
-      state.enemies
-    );
+    _block = toList([new BulletShot(new Position(position, height2))]);
   } else if (cmd instanceof Tick2) {
     let bullets = spaceship.bullets;
-    let _block;
+    let _block$1;
     let _pipe = bullets;
-    _block = filter_map(
+    _block$1 = map(
       _pipe,
       (bullet) => {
         let x;
@@ -6533,15 +6595,15 @@ function apply(cmd, state) {
         y = bullet.y;
         let $ = y + 1 > board_height;
         if ($) {
-          return new Error("");
+          return new BulletRemoved(bullet);
         } else {
-          return new Ok(new Position(x, y + 1));
+          return new BulletMoved(new Position(x, y), new Position(x, y + 1));
         }
       }
     );
-    let bullets$1 = _block;
-    let events = flat_map(
-      bullets$1,
+    let e1 = _block$1;
+    let e2 = flat_map(
+      bullets,
       (bullet) => {
         let x;
         let y;
@@ -6571,56 +6633,14 @@ function apply(cmd, state) {
         );
       }
     );
-    let bullets$2 = filter(
-      bullets$1,
-      (bullet) => {
-        return !any(
-          events,
-          (event2) => {
-            if (event2 instanceof BulletRemoved) {
-              let pos = event2[0];
-              return isEqual(pos, bullet);
-            } else {
-              return false;
-            }
-          }
-        );
-      }
-    );
-    let enemies$1 = filter(
-      enemies,
-      (enemy) => {
-        let enemy_position;
-        enemy_position = enemy.position;
-        return !any(
-          events,
-          (event2) => {
-            if (event2 instanceof EnemyDied) {
-              let pos = event2[0];
-              return isEqual(pos, enemy_position);
-            } else {
-              return false;
-            }
-          }
-        );
-      }
-    );
-    return new Playing(
-      state.board,
-      new Spaceship(spaceship.position, bullets$2, spaceship.height),
-      enemies$1
-    );
+    _block = append(e1, e2);
   } else {
     let x = cmd.x;
     let y = cmd.y;
-    let enemies$1;
-    enemies$1 = state.enemies;
-    return new Playing(
-      state.board,
-      state.spaceship,
-      prepend(new Enemy(new Position(x, y), 6), enemies$1)
-    );
+    _block = toList([new EnemyAdded(new Enemy(new Position(x, y), 6))]);
   }
+  let events = _block;
+  return apply_state(state, events);
 }
 var spaceship_height = 5;
 function create_game() {
@@ -6630,9 +6650,212 @@ function create_game() {
     toList([])
   );
 }
+function echo(value, message, file, line) {
+  const grey = "\x1B[90m";
+  const reset_color = "\x1B[39m";
+  const file_line = `${file}:${line}`;
+  const inspector = new Echo$Inspector();
+  const string_value = inspector.inspect(value);
+  const string_message = message === void 0 ? "" : " " + message;
+  if (globalThis.process?.stderr?.write) {
+    const string5 = `${grey}${file_line}${reset_color}${string_message}
+${string_value}
+`;
+    globalThis.process.stderr.write(string5);
+  } else if (globalThis.Deno) {
+    const string5 = `${grey}${file_line}${reset_color}${string_message}
+${string_value}
+`;
+    globalThis.Deno.stderr.writeSync(new TextEncoder().encode(string5));
+  } else {
+    const string5 = `${file_line}
+${string_value}`;
+    globalThis.console.log(string5);
+  }
+  return value;
+}
+var Echo$Inspector = class {
+  #references = /* @__PURE__ */ new Set();
+  #isDict(value) {
+    try {
+      return value instanceof Dict;
+    } catch {
+      return false;
+    }
+  }
+  #float(float4) {
+    const string5 = float4.toString().replace("+", "");
+    if (string5.indexOf(".") >= 0) {
+      return string5;
+    } else {
+      const index4 = string5.indexOf("e");
+      if (index4 >= 0) {
+        return string5.slice(0, index4) + ".0" + string5.slice(index4);
+      } else {
+        return string5 + ".0";
+      }
+    }
+  }
+  inspect(v) {
+    const t = typeof v;
+    if (v === true) return "True";
+    if (v === false) return "False";
+    if (v === null) return "//js(null)";
+    if (v === void 0) return "Nil";
+    if (t === "string") return this.#string(v);
+    if (t === "bigint" || Number.isInteger(v)) return v.toString();
+    if (t === "number") return this.#float(v);
+    if (v instanceof UtfCodepoint) return this.#utfCodepoint(v);
+    if (v instanceof BitArray) return this.#bit_array(v);
+    if (v instanceof RegExp) return `//js(${v})`;
+    if (v instanceof Date) return `//js(Date("${v.toISOString()}"))`;
+    if (v instanceof globalThis.Error) return `//js(${v.toString()})`;
+    if (v instanceof Function) {
+      const args = [];
+      for (const i of Array(v.length).keys())
+        args.push(String.fromCharCode(i + 97));
+      return `//fn(${args.join(", ")}) { ... }`;
+    }
+    if (this.#references.size === this.#references.add(v).size) {
+      return "//js(circular reference)";
+    }
+    let printed;
+    if (Array.isArray(v)) {
+      printed = `#(${v.map((v2) => this.inspect(v2)).join(", ")})`;
+    } else if (v instanceof List) {
+      printed = this.#list(v);
+    } else if (v instanceof CustomType) {
+      printed = this.#customType(v);
+    } else if (this.#isDict(v)) {
+      printed = this.#dict(v);
+    } else if (v instanceof Set) {
+      return `//js(Set(${[...v].map((v2) => this.inspect(v2)).join(", ")}))`;
+    } else {
+      printed = this.#object(v);
+    }
+    this.#references.delete(v);
+    return printed;
+  }
+  #object(v) {
+    const name = Object.getPrototypeOf(v)?.constructor?.name || "Object";
+    const props = [];
+    for (const k of Object.keys(v)) {
+      props.push(`${this.inspect(k)}: ${this.inspect(v[k])}`);
+    }
+    const body = props.length ? " " + props.join(", ") + " " : "";
+    const head = name === "Object" ? "" : name + " ";
+    return `//js(${head}{${body}})`;
+  }
+  #dict(map3) {
+    let body = "dict.from_list([";
+    let first = true;
+    let key_value_pairs = [];
+    map3.forEach((value, key) => {
+      key_value_pairs.push([key, value]);
+    });
+    key_value_pairs.sort();
+    key_value_pairs.forEach(([key, value]) => {
+      if (!first) body = body + ", ";
+      body = body + "#(" + this.inspect(key) + ", " + this.inspect(value) + ")";
+      first = false;
+    });
+    return body + "])";
+  }
+  #customType(record) {
+    const props = Object.keys(record).map((label) => {
+      const value = this.inspect(record[label]);
+      return isNaN(parseInt(label)) ? `${label}: ${value}` : value;
+    }).join(", ");
+    return props ? `${record.constructor.name}(${props})` : record.constructor.name;
+  }
+  #list(list4) {
+    if (list4 instanceof Empty) {
+      return "[]";
+    }
+    let char_out = 'charlist.from_string("';
+    let list_out = "[";
+    let current = list4;
+    while (current instanceof NonEmpty) {
+      let element4 = current.head;
+      current = current.tail;
+      if (list_out !== "[") {
+        list_out += ", ";
+      }
+      list_out += this.inspect(element4);
+      if (char_out) {
+        if (Number.isInteger(element4) && element4 >= 32 && element4 <= 126) {
+          char_out += String.fromCharCode(element4);
+        } else {
+          char_out = null;
+        }
+      }
+    }
+    if (char_out) {
+      return char_out + '")';
+    } else {
+      return list_out + "]";
+    }
+  }
+  #string(str) {
+    let new_str = '"';
+    for (let i = 0; i < str.length; i++) {
+      const char = str[i];
+      switch (char) {
+        case "\n":
+          new_str += "\\n";
+          break;
+        case "\r":
+          new_str += "\\r";
+          break;
+        case "	":
+          new_str += "\\t";
+          break;
+        case "\f":
+          new_str += "\\f";
+          break;
+        case "\\":
+          new_str += "\\\\";
+          break;
+        case '"':
+          new_str += '\\"';
+          break;
+        default:
+          if (char < " " || char > "~" && char < "\xA0") {
+            new_str += "\\u{" + char.charCodeAt(0).toString(16).toUpperCase().padStart(4, "0") + "}";
+          } else {
+            new_str += char;
+          }
+      }
+    }
+    new_str += '"';
+    return new_str;
+  }
+  #utfCodepoint(codepoint2) {
+    return `//utfcodepoint(${String.fromCodePoint(codepoint2.value)})`;
+  }
+  #bit_array(bits) {
+    if (bits.bitSize === 0) {
+      return "<<>>";
+    }
+    let acc = "<<";
+    for (let i = 0; i < bits.byteSize - 1; i++) {
+      acc += bits.byteAt(i).toString();
+      acc += ", ";
+    }
+    if (bits.byteSize * 8 === bits.bitSize) {
+      acc += bits.byteAt(bits.byteSize - 1).toString();
+    } else {
+      const trailingBitsCount = bits.bitSize % 8;
+      acc += bits.byteAt(bits.byteSize - 1) >> 8 - trailingBitsCount;
+      acc += `:size(${trailingBitsCount})`;
+    }
+    acc += ">>";
+    return acc;
+  }
+};
 
 // build/dev/javascript/space_invaders/space_invaders.mjs
-var FILEPATH3 = "src/space_invaders.gleam";
+var FILEPATH4 = "src/space_invaders.gleam";
 var Idle = class extends CustomType {
 };
 var Ready = class extends CustomType {
@@ -6662,7 +6885,7 @@ function update_game(model, cmd) {
   } else {
     throw makeError(
       "let_assert",
-      FILEPATH3,
+      FILEPATH4,
       "space_invaders",
       64,
       "update_game",
@@ -6711,7 +6934,7 @@ function update2(model, msg) {
   if (!(model$1 instanceof Ready)) {
     throw makeError(
       "let_assert",
-      FILEPATH3,
+      FILEPATH4,
       "space_invaders",
       73,
       "update",
@@ -6741,7 +6964,7 @@ function update2(model, msg) {
     if (!(model$2 instanceof Ready)) {
       throw makeError(
         "let_assert",
-        FILEPATH3,
+        FILEPATH4,
         "space_invaders",
         83,
         "update",
@@ -6785,7 +7008,7 @@ function space_ship(side) {
   } else {
     throw makeError(
       "let_assert",
-      FILEPATH3,
+      FILEPATH4,
       "space_invaders",
       121,
       "space_ship",
@@ -6929,7 +7152,7 @@ function main() {
   } else {
     throw makeError(
       "let_assert",
-      FILEPATH3,
+      FILEPATH4,
       "space_invaders",
       31,
       "main",
@@ -6955,7 +7178,7 @@ function main() {
       } else {
         throw makeError(
           "let_assert",
-          FILEPATH3,
+          FILEPATH4,
           "space_invaders",
           38,
           "main",
