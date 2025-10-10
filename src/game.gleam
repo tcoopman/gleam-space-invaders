@@ -63,34 +63,33 @@ pub fn apply(cmd: Command, state: State) -> State {
       BulletShot(Position(position, height)),
     ]
     Spaceship(bullets:, ..), Tick -> {
-      let e1 =
-        bullets
-        |> list.map(fn(bullet) {
-          let Position(x:, y:) = bullet
-          case y + 1 > board_height {
-            True -> BulletRemoved(bullet)
-            False -> BulletMoved(Position(x, y), Position(x, y + 1))
-          }
-        })
+      list.flat_map(bullets, fn(bullet) {
+        let Position(x:, y:) = bullet
 
-      let e2 =
-        list.flat_map(bullets, fn(bullet) {
-          let Position(x:, y:) = bullet
-
+        let enemies_hit =
           list.flat_map(enemies, fn(enemy) {
             let Enemy(Position(x: enemy_x, y: enemy_y), width:) = enemy
             case
-              y == enemy_y && enemy_x - width / 2 < x && enemy_x + width / 2 > x
+              y + 1 == enemy_y
+              && enemy_x - width / 2 < x
+              && enemy_x + width / 2 > x
             {
-              True -> [
-                BulletRemoved(Position(x, y)),
-                EnemyDied(Position(x: enemy_x, y: enemy_y)),
-              ]
+              True -> [EnemyDied(Position(x: enemy_x, y: enemy_y))]
               False -> []
             }
           })
-        })
-      list.append(e1, e2)
+
+        let bullet_events = case enemies_hit {
+          [] ->
+            case y + 1 > board_height {
+              True -> [BulletRemoved(bullet)]
+              False -> [BulletMoved(bullet, Position(x, y + 1))]
+            }
+          _ -> [BulletRemoved(bullet)]
+        }
+
+        list.append(enemies_hit, bullet_events)
+      })
     }
 
     _, IntroduceEnemy(x:, y:) -> [EnemyAdded(Enemy(Position(x, y), width: 6))]
@@ -99,7 +98,6 @@ pub fn apply(cmd: Command, state: State) -> State {
 }
 
 fn apply_state(state, events) {
-  echo events
   list.fold(events, state, fn(state, event) {
     let Playing(spaceship:, enemies:, ..) = state
     let Spaceship(bullets:, ..) = spaceship
@@ -138,29 +136,5 @@ fn apply_state(state, events) {
       }
       EnemyMoved(_) -> todo
     }
-    // let bullets =
-    //   list.filter(bullets, fn(bullet) {
-    //     !list.any(events, fn(event) {
-    //       case event {
-    //         BulletRemoved(pos) -> pos == bullet
-    //         _ -> False
-    //       }
-    //     })
-    //   })
-    // let enemies =
-    //   list.filter(enemies, fn(enemy) {
-    //     let Enemy(enemy_position, ..) = enemy
-    //     !list.any(events, fn(event) {
-    //       case event {
-    //         EnemyDied(pos) -> pos == enemy_position
-    //         _ -> False
-    //       }
-    //     })
-    //   })
-    // Playing(
-    //   ..state,
-    //   spaceship: Spaceship(..spaceship, bullets: bullets),
-    //   enemies:,
-    // )
   })
 }
