@@ -6367,27 +6367,27 @@ function apply(cmd, state) {
     }
   } else if (cmd instanceof Shoot) {
     let position = spaceship.position;
+    let bullets = spaceship.bullets;
     let height2 = spaceship.height;
     _block = new Spaceship(
       spaceship.position,
-      toList([new Position(position, height2)]),
+      prepend(new Position(position, height2), bullets),
       spaceship.height
     );
   } else {
     let bullets = spaceship.bullets;
     let _block$1;
-    if (bullets instanceof Empty) {
-      _block$1 = bullets;
-    } else {
-      let $ = bullets.tail;
-      if ($ instanceof Empty) {
-        let x = bullets.head.x;
-        let y = bullets.head.y;
-        _block$1 = toList([new Position(x, y + 1)]);
-      } else {
-        _block$1 = bullets;
+    let _pipe = bullets;
+    _block$1 = map(
+      _pipe,
+      (bullet) => {
+        let x;
+        let y;
+        x = bullet.x;
+        y = bullet.y;
+        return new Position(x, y + 1);
       }
-    }
+    );
     let bullets$1 = _block$1;
     _block = new Spaceship(spaceship.position, bullets$1, spaceship.height);
   }
@@ -6436,15 +6436,15 @@ function update_game(model, cmd) {
       "let_assert",
       FILEPATH3,
       "space_invaders",
-      61,
+      62,
       "update_game",
       "Pattern match failed, no pattern matched the value.",
       {
         value: model,
-        start: 1526,
-        end: 1561,
-        pattern_start: 1537,
-        pattern_end: 1553
+        start: 1544,
+        end: 1579,
+        pattern_start: 1555,
+        pattern_end: 1571
       }
     );
   }
@@ -6485,15 +6485,15 @@ function update2(model, msg) {
       "let_assert",
       FILEPATH3,
       "space_invaders",
-      70,
+      71,
       "update",
       "Pattern match failed, no pattern matched the value.",
       {
         value: model$1,
-        start: 1768,
-        end: 1796,
-        pattern_start: 1779,
-        pattern_end: 1788
+        start: 1786,
+        end: 1814,
+        pattern_start: 1797,
+        pattern_end: 1806
       }
     );
   }
@@ -6515,15 +6515,15 @@ function update2(model, msg) {
         "let_assert",
         FILEPATH3,
         "space_invaders",
-        82,
+        83,
         "update",
         "Pattern match failed, no pattern matched the value.",
         {
           value: model$2,
-          start: 2180,
-          end: 2208,
-          pattern_start: 2191,
-          pattern_end: 2200
+          start: 2198,
+          end: 2226,
+          pattern_start: 2209,
+          pattern_end: 2218
         }
       );
     }
@@ -6551,15 +6551,15 @@ function space_ship(side) {
       "let_assert",
       FILEPATH3,
       "space_invaders",
-      115,
+      116,
       "space_ship",
       "Pattern match failed, no pattern matched the value.",
       {
         value: $,
-        start: 2999,
-        end: 3063,
-        pattern_start: 3010,
-        pattern_end: 3019
+        start: 3017,
+        end: 3081,
+        pattern_start: 3028,
+        pattern_end: 3037
       }
     );
   }
@@ -6608,38 +6608,22 @@ function render_game(game) {
   bullets = game.spaceship.bullets;
   let red = light_red;
   let spaceship_position = identity(position) * side_size;
-  let _block;
-  if (bullets instanceof Empty) {
-    _block = bullets;
-  } else {
-    let $ = bullets.tail;
-    if ($ instanceof Empty) {
-      let x = bullets.head.x;
-      let y = bullets.head.y;
+  let rendered_bullets = map(
+    bullets,
+    (bullet) => {
+      let x;
+      let y;
+      x = bullet.x;
+      y = bullet.y;
       let bullet_x = identity(x) * side_size;
       let bullet_y = size$1 - identity(y) * side_size;
-      echo([y, bullet_y], void 0, "src/space_invaders.gleam", 159);
-      _block = toList([
-        (() => {
-          let _pipe = rectangle(side_size, 30);
-          let _pipe$1 = fill(_pipe, red);
-          let _pipe$2 = translate_x(_pipe$1, bullet_x + 2 * side_size);
-          return translate_y(_pipe$2, bullet_y);
-        })()
-      ]);
-    } else {
-      throw makeError(
-        "todo",
-        FILEPATH3,
-        "space_invaders",
-        167,
-        "render_game",
-        "`todo` expression evaluated. This code has not yet been implemented.",
-        {}
-      );
+      echo([y, bullet_y], void 0, "src/space_invaders.gleam", 160);
+      let _pipe = rectangle(side_size, 30);
+      let _pipe$1 = fill(_pipe, red);
+      let _pipe$2 = translate_x(_pipe$1, bullet_x + 2 * side_size);
+      return translate_y(_pipe$2, bullet_y);
     }
-  }
-  let rendered_bullets = _block;
+  );
   return combine(
     prepend(
       (() => {
@@ -6687,10 +6671,10 @@ function main() {
       "let_assert",
       FILEPATH3,
       "space_invaders",
-      28,
+      29,
       "main",
       "Pattern match failed, no pattern matched the value.",
-      { value: $, start: 715, end: 770, pattern_start: 726, pattern_end: 737 }
+      { value: $, start: 733, end: 788, pattern_start: 744, pattern_end: 755 }
     );
   }
   addGlobalEventListener(
@@ -6713,15 +6697,15 @@ function main() {
           "let_assert",
           FILEPATH3,
           "space_invaders",
-          35,
+          36,
           "main",
           "Pattern match failed, no pattern matched the value.",
           {
             value: result,
-            start: 962,
-            end: 991,
-            pattern_start: 973,
-            pattern_end: 982
+            start: 980,
+            end: 1009,
+            pattern_start: 991,
+            pattern_end: 1e3
           }
         );
       }

@@ -53,6 +53,19 @@ pub fn bullet_moves_forward_after_tick_test() {
   assert Position(50, 5 + 1) == position
 }
 
+pub fn foo_test() {
+  let state =
+    game.create_game()
+    |> game.apply(Shoot, _)
+    |> game.apply(Tick, _)
+    |> game.apply(MoveLeft, _)
+    |> game.apply(Shoot, _)
+    |> game.apply(Tick, _)
+  let assert Playing(spaceship: Spaceship(bullets: [b2, b1], ..), ..) = state
+  assert Position(50, 7) == b1
+  assert Position(49, 6) == b2
+}
+
 fn spaceship_position(state) {
   let Playing(spaceship: Spaceship(position:, ..), ..) = state
   position

@@ -1,3 +1,5 @@
+import gleam/list
+
 const board_width = 100
 
 const board_height = 100
@@ -43,14 +45,16 @@ pub fn apply(cmd: Command, state: State) -> State {
       Spaceship(..spaceship, position: current - 1)
     Spaceship(position: current, ..), MoveRight ->
       Spaceship(..spaceship, position: current + 1)
-    Spaceship(position:, height:, ..), Shoot ->
-      Spaceship(..spaceship, bullets: [Position(position, height)])
+    Spaceship(position:, height:, bullets:), Shoot ->
+      Spaceship(..spaceship, bullets: [Position(position, height), ..bullets])
     Spaceship(bullets:, ..), Tick -> {
-      let bullets = case bullets {
-        [] -> []
-        [Position(x:, y:)] -> [Position(x, y + 1)]
-        _ -> bullets
-      }
+      let bullets =
+        bullets
+        |> list.map(fn(bullet) {
+          let Position(x:, y:) = bullet
+
+          Position(x, y + 1)
+        })
       Spaceship(..spaceship, bullets: bullets)
     }
   }

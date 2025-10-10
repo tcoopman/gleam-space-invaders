@@ -4,6 +4,7 @@ import gleam/dynamic.{type Dynamic}
 import gleam/dynamic/decode
 import gleam/float
 import gleam/int
+import gleam/list
 import gleam_community/colour
 import lustre
 import lustre/attribute
@@ -151,21 +152,17 @@ fn render_game(game: game.State) -> p.Picture {
 
   let red = colour.light_red
   let spaceship_position = int.to_float(position) *. side_size
-  let rendered_bullets = case bullets {
-    [] -> []
-    [game.Position(x, y)] -> {
+  let rendered_bullets =
+    list.map(bullets, fn(bullet) {
+      let game.Position(x:, y:) = bullet
       let bullet_x = int.to_float(x) *. side_size
       let bullet_y = size -. int.to_float(y) *. side_size
       echo #(y, bullet_y)
-      [
-        p.rectangle(side_size, 30.0)
-        |> p.fill(red)
-        |> p.translate_x(bullet_x +. 2.0 *. side_size)
-        |> p.translate_y(bullet_y),
-      ]
-    }
-    _ -> todo
-  }
+      p.rectangle(side_size, 30.0)
+      |> p.fill(red)
+      |> p.translate_x(bullet_x +. 2.0 *. side_size)
+      |> p.translate_y(bullet_y)
+    })
 
   p.combine([
     ship
