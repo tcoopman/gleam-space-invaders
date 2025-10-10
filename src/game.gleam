@@ -69,10 +69,11 @@ pub fn apply(cmd: Command, state: State) -> State {
         let enemies_hit =
           list.flat_map(enemies, fn(enemy) {
             let Enemy(Position(x: enemy_x, y: enemy_y), width:) = enemy
+            echo [enemy_x, width, x, y]
             case
               y + 1 == enemy_y
-              && enemy_x - width / 2 < x
-              && enemy_x + width / 2 > x
+              && enemy_x - width / 2 <= x
+              && enemy_x + width / 2 >= x
             {
               True -> [EnemyDied(Position(x: enemy_x, y: enemy_y))]
               False -> []

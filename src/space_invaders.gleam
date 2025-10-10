@@ -91,10 +91,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
         "d" -> #(update_game(model, game.MoveRight), effect.none())
         "s" -> #(update_game(model, game.Shoot), effect.none())
         "e" -> #(
-          update_game(
-            model,
-            game.IntroduceEnemy(int.random(100), int.random(20) + 50),
-          ),
+          update_game(model, game.IntroduceEnemy(50, int.random(20) + 50)),
           effect.none(),
         )
         _ -> #(model, effect.none())
@@ -115,23 +112,25 @@ fn schedule_next_frame() -> Effect(Msg) {
   dispatch(Tick(0.0))
 }
 
-fn space_ship(side) -> p.Picture {
+fn space_ship(grid_size) -> p.Picture {
   let assert Ok(green) = colour.from_rgba_hex_string("#00CCC00FF")
+  let width = grid_size *. 5.0
 
   p.combine([
-    p.rectangle(side *. 5.0, side)
+    p.rectangle(width, grid_size)
       |> p.translate_x(0.0)
-      |> p.translate_y(side *. 2.0),
+      |> p.translate_y(grid_size *. 2.0),
 
-    p.rectangle(side *. 3.0, side)
-      |> p.translate_x(side)
-      |> p.translate_y(side),
-    p.rectangle(side, side)
-      |> p.translate_x(side *. 2.0)
+    p.rectangle(grid_size *. 3.0, grid_size)
+      |> p.translate_x(grid_size)
+      |> p.translate_y(grid_size),
+    p.rectangle(grid_size, grid_size)
+      |> p.translate_x(grid_size *. 2.0)
       |> p.translate_y(0.0),
   ])
   |> p.fill(green)
   |> p.stroke(green, width: 0.0)
+  |> p.translate_x(width /. -2.0)
 }
 
 fn canvas(picture: p.Picture, attributes: List(attribute.Attribute(a))) {
@@ -142,28 +141,29 @@ fn canvas(picture: p.Picture, attributes: List(attribute.Attribute(a))) {
   )
 }
 
-fn render_enemies(enemies, side_size, size) -> p.Picture {
+fn render_enemies(enemies, grid_size, size) -> p.Picture {
   p.combine({
     list.map(enemies, fn(enemy) {
       let game.Enemy(position: game.Position(x:, y:), width:) = enemy
-      let enemy_x = int.to_float(x) *. side_size
-      let enemy_y = size -. int.to_float(y) *. side_size
-      p.rectangle(int.to_float(width) *. side_size, 50.0)
+      let enemy_x = int.to_float(x - width / 2) *. grid_size
+      let enemy_y = size -. int.to_float(y) *. grid_size
+
+      p.rectangle(int.to_float(width) *. grid_size, 50.0)
       |> p.fill(colour.light_orange)
       |> p.translate_xy(enemy_x, enemy_y)
     })
   })
 }
 
-fn render_bullets(bullets, side_size, size) -> p.Picture {
+fn render_bullets(bullets, grid_size, size) -> p.Picture {
   p.combine(
     list.map(bullets, fn(bullet) {
       let game.Position(x:, y:) = bullet
-      let bullet_x = int.to_float(x) *. side_size
-      let bullet_y = size -. int.to_float(y) *. side_size
-      p.rectangle(side_size, 30.0)
+      let bullet_x = { int.to_float(x) -. 5.0 /. 2.0 } *. grid_size
+      let bullet_y = size -. int.to_float(y) *. grid_size
+      p.rectangle(grid_size, 30.0)
       |> p.fill(colour.red)
-      |> p.translate_xy(bullet_x +. 2.0 *. side_size, bullet_y)
+      |> p.translate_xy(bullet_x +. 2.0 *. grid_size, bullet_y)
     }),
   )
 }
@@ -171,23 +171,26 @@ fn render_bullets(bullets, side_size, size) -> p.Picture {
 // const scale = 100.0
 
 fn render_game(game: game.State) -> p.Picture {
-  let size = int.to_float(size)
-  let steps = max +. 5.0
-  let side_size = size /. steps
+  let screen_pixels = int.to_float(size)
+  let grid_size = screen_pixels /. max
 
-  let ship = space_ship(side_size)
+  let ship = space_ship(grid_size)
   let game.Playing(
     spaceship: game.Spaceship(position:, bullets:, ..),
     enemies:,
     ..,
   ) = game
 
-  let spaceship_position = int.to_float(position) *. side_size
+  let spaceship_position = int.to_float(position) *. grid_size
+  echo grid_size
   p.combine([
     ship
-      |> p.translate_xy(spaceship_position, size -. side_size *. 3.0),
-    render_bullets(bullets, side_size, size),
-    render_enemies(enemies, side_size, size),
+      |> p.translate_xy(spaceship_position, screen_pixels -. 8.0 *. 3.0),
+    render_bullets(bullets, 8.0, screen_pixels),
+    render_enemies(enemies, 8.0, screen_pixels),
+    p.rectangle(2.0, 800.0)
+      |> p.translate_x(800.0 /. 2.0 -. 1.0)
+      |> p.fill(colour.white),
   ])
 }
 

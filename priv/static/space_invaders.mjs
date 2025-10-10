@@ -257,6 +257,11 @@ function bitArrayByteAt(buffer, bitOffset, index4) {
     return a | b;
   }
 }
+var UtfCodepoint = class {
+  constructor(value) {
+    this.value = value;
+  }
+};
 var isBitArrayDeprecationMessagePrinted = {};
 function bitArrayPrintDeprecationWarning(name, message) {
   if (isBitArrayDeprecationMessagePrinted[name]) {
@@ -2739,6 +2744,7 @@ var light_orange = /* @__PURE__ */ new Rgba(
   0.24313725490196078,
   1
 );
+var white = /* @__PURE__ */ new Rgba(1, 1, 1, 1);
 
 // build/dev/javascript/gleam_stdlib/gleam/bool.mjs
 function guard(requirement, consequence, alternative) {
@@ -6535,7 +6541,7 @@ function apply_state(state, events) {
           "todo",
           FILEPATH3,
           "game",
-          137,
+          138,
           "apply_state",
           "`todo` expression evaluated. This code has not yet been implemented.",
           {}
@@ -6590,9 +6596,15 @@ function apply(cmd, state) {
             width2 = enemy.width;
             enemy_x = enemy.position.x;
             enemy_y = enemy.position.y;
+            echo(
+              toList([enemy_x, width2, x, y]),
+              void 0,
+              "src/game.gleam",
+              72
+            );
             let $ = y + 1 === enemy_y && enemy_x - globalThis.Math.trunc(
               width2 / 2
-            ) < x && enemy_x + globalThis.Math.trunc(width2 / 2) > x;
+            ) <= x && enemy_x + globalThis.Math.trunc(width2 / 2) >= x;
             if ($) {
               return toList([new EnemyDied(new Position(enemy_x, enemy_y))]);
             } else {
@@ -6631,6 +6643,209 @@ function create_game() {
     toList([])
   );
 }
+function echo(value, message, file, line) {
+  const grey = "\x1B[90m";
+  const reset_color = "\x1B[39m";
+  const file_line = `${file}:${line}`;
+  const inspector = new Echo$Inspector();
+  const string_value = inspector.inspect(value);
+  const string_message = message === void 0 ? "" : " " + message;
+  if (globalThis.process?.stderr?.write) {
+    const string5 = `${grey}${file_line}${reset_color}${string_message}
+${string_value}
+`;
+    globalThis.process.stderr.write(string5);
+  } else if (globalThis.Deno) {
+    const string5 = `${grey}${file_line}${reset_color}${string_message}
+${string_value}
+`;
+    globalThis.Deno.stderr.writeSync(new TextEncoder().encode(string5));
+  } else {
+    const string5 = `${file_line}
+${string_value}`;
+    globalThis.console.log(string5);
+  }
+  return value;
+}
+var Echo$Inspector = class {
+  #references = /* @__PURE__ */ new Set();
+  #isDict(value) {
+    try {
+      return value instanceof Dict;
+    } catch {
+      return false;
+    }
+  }
+  #float(float4) {
+    const string5 = float4.toString().replace("+", "");
+    if (string5.indexOf(".") >= 0) {
+      return string5;
+    } else {
+      const index4 = string5.indexOf("e");
+      if (index4 >= 0) {
+        return string5.slice(0, index4) + ".0" + string5.slice(index4);
+      } else {
+        return string5 + ".0";
+      }
+    }
+  }
+  inspect(v) {
+    const t = typeof v;
+    if (v === true) return "True";
+    if (v === false) return "False";
+    if (v === null) return "//js(null)";
+    if (v === void 0) return "Nil";
+    if (t === "string") return this.#string(v);
+    if (t === "bigint" || Number.isInteger(v)) return v.toString();
+    if (t === "number") return this.#float(v);
+    if (v instanceof UtfCodepoint) return this.#utfCodepoint(v);
+    if (v instanceof BitArray) return this.#bit_array(v);
+    if (v instanceof RegExp) return `//js(${v})`;
+    if (v instanceof Date) return `//js(Date("${v.toISOString()}"))`;
+    if (v instanceof globalThis.Error) return `//js(${v.toString()})`;
+    if (v instanceof Function) {
+      const args = [];
+      for (const i of Array(v.length).keys())
+        args.push(String.fromCharCode(i + 97));
+      return `//fn(${args.join(", ")}) { ... }`;
+    }
+    if (this.#references.size === this.#references.add(v).size) {
+      return "//js(circular reference)";
+    }
+    let printed;
+    if (Array.isArray(v)) {
+      printed = `#(${v.map((v2) => this.inspect(v2)).join(", ")})`;
+    } else if (v instanceof List) {
+      printed = this.#list(v);
+    } else if (v instanceof CustomType) {
+      printed = this.#customType(v);
+    } else if (this.#isDict(v)) {
+      printed = this.#dict(v);
+    } else if (v instanceof Set) {
+      return `//js(Set(${[...v].map((v2) => this.inspect(v2)).join(", ")}))`;
+    } else {
+      printed = this.#object(v);
+    }
+    this.#references.delete(v);
+    return printed;
+  }
+  #object(v) {
+    const name = Object.getPrototypeOf(v)?.constructor?.name || "Object";
+    const props = [];
+    for (const k of Object.keys(v)) {
+      props.push(`${this.inspect(k)}: ${this.inspect(v[k])}`);
+    }
+    const body = props.length ? " " + props.join(", ") + " " : "";
+    const head = name === "Object" ? "" : name + " ";
+    return `//js(${head}{${body}})`;
+  }
+  #dict(map3) {
+    let body = "dict.from_list([";
+    let first = true;
+    let key_value_pairs = [];
+    map3.forEach((value, key) => {
+      key_value_pairs.push([key, value]);
+    });
+    key_value_pairs.sort();
+    key_value_pairs.forEach(([key, value]) => {
+      if (!first) body = body + ", ";
+      body = body + "#(" + this.inspect(key) + ", " + this.inspect(value) + ")";
+      first = false;
+    });
+    return body + "])";
+  }
+  #customType(record) {
+    const props = Object.keys(record).map((label) => {
+      const value = this.inspect(record[label]);
+      return isNaN(parseInt(label)) ? `${label}: ${value}` : value;
+    }).join(", ");
+    return props ? `${record.constructor.name}(${props})` : record.constructor.name;
+  }
+  #list(list4) {
+    if (list4 instanceof Empty) {
+      return "[]";
+    }
+    let char_out = 'charlist.from_string("';
+    let list_out = "[";
+    let current = list4;
+    while (current instanceof NonEmpty) {
+      let element4 = current.head;
+      current = current.tail;
+      if (list_out !== "[") {
+        list_out += ", ";
+      }
+      list_out += this.inspect(element4);
+      if (char_out) {
+        if (Number.isInteger(element4) && element4 >= 32 && element4 <= 126) {
+          char_out += String.fromCharCode(element4);
+        } else {
+          char_out = null;
+        }
+      }
+    }
+    if (char_out) {
+      return char_out + '")';
+    } else {
+      return list_out + "]";
+    }
+  }
+  #string(str) {
+    let new_str = '"';
+    for (let i = 0; i < str.length; i++) {
+      const char = str[i];
+      switch (char) {
+        case "\n":
+          new_str += "\\n";
+          break;
+        case "\r":
+          new_str += "\\r";
+          break;
+        case "	":
+          new_str += "\\t";
+          break;
+        case "\f":
+          new_str += "\\f";
+          break;
+        case "\\":
+          new_str += "\\\\";
+          break;
+        case '"':
+          new_str += '\\"';
+          break;
+        default:
+          if (char < " " || char > "~" && char < "\xA0") {
+            new_str += "\\u{" + char.charCodeAt(0).toString(16).toUpperCase().padStart(4, "0") + "}";
+          } else {
+            new_str += char;
+          }
+      }
+    }
+    new_str += '"';
+    return new_str;
+  }
+  #utfCodepoint(codepoint2) {
+    return `//utfcodepoint(${String.fromCodePoint(codepoint2.value)})`;
+  }
+  #bit_array(bits) {
+    if (bits.bitSize === 0) {
+      return "<<>>";
+    }
+    let acc = "<<";
+    for (let i = 0; i < bits.byteSize - 1; i++) {
+      acc += bits.byteAt(i).toString();
+      acc += ", ";
+    }
+    if (bits.byteSize * 8 === bits.bitSize) {
+      acc += bits.byteAt(bits.byteSize - 1).toString();
+    } else {
+      const trailingBitsCount = bits.bitSize % 8;
+      acc += bits.byteAt(bits.byteSize - 1) >> 8 - trailingBitsCount;
+      acc += `:size(${trailingBitsCount})`;
+    }
+    acc += ">>";
+    return acc;
+  }
+};
 
 // build/dev/javascript/space_invaders/space_invaders.mjs
 var FILEPATH4 = "src/space_invaders.gleam";
@@ -6763,10 +6978,7 @@ function update2(model, msg) {
       return [update_game(model$1, new Shoot()), none()];
     } else if (key === "e") {
       return [
-        update_game(
-          model$1,
-          new IntroduceEnemy(random(100), random(20) + 50)
-        ),
+        update_game(model$1, new IntroduceEnemy(50, random(20) + 50)),
         none()
       ];
     } else {
@@ -6774,7 +6986,7 @@ function update2(model, msg) {
     }
   }
 }
-function space_ship(side) {
+function space_ship(grid_size) {
   let $ = from_rgba_hex_string("#00CCC00FF");
   let green;
   if ($ instanceof Ok) {
@@ -6784,39 +6996,41 @@ function space_ship(side) {
       "let_assert",
       FILEPATH4,
       "space_invaders",
-      119,
+      116,
       "space_ship",
       "Pattern match failed, no pattern matched the value.",
       {
         value: $,
-        start: 3018,
-        end: 3082,
-        pattern_start: 3029,
-        pattern_end: 3038
+        start: 2973,
+        end: 3037,
+        pattern_start: 2984,
+        pattern_end: 2993
       }
     );
   }
+  let width2 = grid_size * 5;
   let _pipe = combine(
     toList([
       (() => {
-        let _pipe2 = rectangle(side * 5, side);
+        let _pipe2 = rectangle(width2, grid_size);
         let _pipe$12 = translate_x(_pipe2, 0);
-        return translate_y(_pipe$12, side * 2);
+        return translate_y(_pipe$12, grid_size * 2);
       })(),
       (() => {
-        let _pipe2 = rectangle(side * 3, side);
-        let _pipe$12 = translate_x(_pipe2, side);
-        return translate_y(_pipe$12, side);
+        let _pipe2 = rectangle(grid_size * 3, grid_size);
+        let _pipe$12 = translate_x(_pipe2, grid_size);
+        return translate_y(_pipe$12, grid_size);
       })(),
       (() => {
-        let _pipe2 = rectangle(side, side);
-        let _pipe$12 = translate_x(_pipe2, side * 2);
+        let _pipe2 = rectangle(grid_size, grid_size);
+        let _pipe$12 = translate_x(_pipe2, grid_size * 2);
         return translate_y(_pipe$12, 0);
       })()
     ])
   );
   let _pipe$1 = fill(_pipe, green);
-  return stroke(_pipe$1, green, 0);
+  let _pipe$2 = stroke(_pipe$1, green, 0);
+  return translate_x(_pipe$2, width2 / -2);
 }
 function canvas(picture, attributes) {
   return element2(
@@ -6828,7 +7042,7 @@ function canvas(picture, attributes) {
     toList([])
   );
 }
-function render_enemies(enemies, side_size, size3) {
+function render_enemies(enemies, grid_size, size3) {
   return combine(
     map(
       enemies,
@@ -6839,16 +7053,16 @@ function render_enemies(enemies, side_size, size3) {
         width2 = enemy.width;
         x = enemy.position.x;
         y = enemy.position.y;
-        let enemy_x = identity(x) * side_size;
-        let enemy_y = size3 - identity(y) * side_size;
-        let _pipe = rectangle(identity(width2) * side_size, 50);
+        let enemy_x = identity(x - globalThis.Math.trunc(width2 / 2)) * grid_size;
+        let enemy_y = size3 - identity(y) * grid_size;
+        let _pipe = rectangle(identity(width2) * grid_size, 50);
         let _pipe$1 = fill(_pipe, light_orange);
         return translate_xy(_pipe$1, enemy_x, enemy_y);
       }
     )
   );
 }
-function render_bullets(bullets, side_size, size3) {
+function render_bullets(bullets, grid_size, size3) {
   return combine(
     map(
       bullets,
@@ -6857,11 +7071,11 @@ function render_bullets(bullets, side_size, size3) {
         let y;
         x = bullet.x;
         y = bullet.y;
-        let bullet_x = identity(x) * side_size;
-        let bullet_y = size3 - identity(y) * side_size;
-        let _pipe = rectangle(side_size, 30);
+        let bullet_x = (identity(x) - 5 / 2) * grid_size;
+        let bullet_y = size3 - identity(y) * grid_size;
+        let _pipe = rectangle(grid_size, 30);
         let _pipe$1 = fill(_pipe, red);
-        return translate_xy(_pipe$1, bullet_x + 2 * side_size, bullet_y);
+        return translate_xy(_pipe$1, bullet_x + 2 * grid_size, bullet_y);
       }
     )
   );
@@ -6869,17 +7083,17 @@ function render_bullets(bullets, side_size, size3) {
 var max3 = 100;
 var size2 = 800;
 function render_game(game) {
-  let size$1 = identity(size2);
-  let steps = max3 + 5;
-  let side_size = divideFloat(size$1, steps);
-  let ship = space_ship(side_size);
+  let screen_pixels = identity(size2);
+  let grid_size = divideFloat(screen_pixels, max3);
+  let ship = space_ship(grid_size);
   let position;
   let bullets;
   let enemies;
   enemies = game.enemies;
   position = game.spaceship.position;
   bullets = game.spaceship.bullets;
-  let spaceship_position = identity(position) * side_size;
+  let spaceship_position = identity(position) * grid_size;
+  echo2(grid_size, void 0, "src/space_invaders.gleam", 185);
   return combine(
     toList([
       (() => {
@@ -6887,11 +7101,16 @@ function render_game(game) {
         return translate_xy(
           _pipe,
           spaceship_position,
-          size$1 - side_size * 3
+          screen_pixels - 8 * 3
         );
       })(),
-      render_bullets(bullets, side_size, size$1),
-      render_enemies(enemies, side_size, size$1)
+      render_bullets(bullets, 8, screen_pixels),
+      render_enemies(enemies, 8, screen_pixels),
+      (() => {
+        let _pipe = rectangle(2, 800);
+        let _pipe$1 = translate_x(_pipe, 800 / 2 - 1);
+        return fill(_pipe$1, white);
+      })()
     ])
   );
 }
@@ -6974,6 +7193,209 @@ function main() {
   );
   return void 0;
 }
+function echo2(value, message, file, line) {
+  const grey = "\x1B[90m";
+  const reset_color = "\x1B[39m";
+  const file_line = `${file}:${line}`;
+  const inspector = new Echo$Inspector2();
+  const string_value = inspector.inspect(value);
+  const string_message = message === void 0 ? "" : " " + message;
+  if (globalThis.process?.stderr?.write) {
+    const string5 = `${grey}${file_line}${reset_color}${string_message}
+${string_value}
+`;
+    globalThis.process.stderr.write(string5);
+  } else if (globalThis.Deno) {
+    const string5 = `${grey}${file_line}${reset_color}${string_message}
+${string_value}
+`;
+    globalThis.Deno.stderr.writeSync(new TextEncoder().encode(string5));
+  } else {
+    const string5 = `${file_line}
+${string_value}`;
+    globalThis.console.log(string5);
+  }
+  return value;
+}
+var Echo$Inspector2 = class {
+  #references = /* @__PURE__ */ new Set();
+  #isDict(value) {
+    try {
+      return value instanceof Dict;
+    } catch {
+      return false;
+    }
+  }
+  #float(float4) {
+    const string5 = float4.toString().replace("+", "");
+    if (string5.indexOf(".") >= 0) {
+      return string5;
+    } else {
+      const index4 = string5.indexOf("e");
+      if (index4 >= 0) {
+        return string5.slice(0, index4) + ".0" + string5.slice(index4);
+      } else {
+        return string5 + ".0";
+      }
+    }
+  }
+  inspect(v) {
+    const t = typeof v;
+    if (v === true) return "True";
+    if (v === false) return "False";
+    if (v === null) return "//js(null)";
+    if (v === void 0) return "Nil";
+    if (t === "string") return this.#string(v);
+    if (t === "bigint" || Number.isInteger(v)) return v.toString();
+    if (t === "number") return this.#float(v);
+    if (v instanceof UtfCodepoint) return this.#utfCodepoint(v);
+    if (v instanceof BitArray) return this.#bit_array(v);
+    if (v instanceof RegExp) return `//js(${v})`;
+    if (v instanceof Date) return `//js(Date("${v.toISOString()}"))`;
+    if (v instanceof globalThis.Error) return `//js(${v.toString()})`;
+    if (v instanceof Function) {
+      const args = [];
+      for (const i of Array(v.length).keys())
+        args.push(String.fromCharCode(i + 97));
+      return `//fn(${args.join(", ")}) { ... }`;
+    }
+    if (this.#references.size === this.#references.add(v).size) {
+      return "//js(circular reference)";
+    }
+    let printed;
+    if (Array.isArray(v)) {
+      printed = `#(${v.map((v2) => this.inspect(v2)).join(", ")})`;
+    } else if (v instanceof List) {
+      printed = this.#list(v);
+    } else if (v instanceof CustomType) {
+      printed = this.#customType(v);
+    } else if (this.#isDict(v)) {
+      printed = this.#dict(v);
+    } else if (v instanceof Set) {
+      return `//js(Set(${[...v].map((v2) => this.inspect(v2)).join(", ")}))`;
+    } else {
+      printed = this.#object(v);
+    }
+    this.#references.delete(v);
+    return printed;
+  }
+  #object(v) {
+    const name = Object.getPrototypeOf(v)?.constructor?.name || "Object";
+    const props = [];
+    for (const k of Object.keys(v)) {
+      props.push(`${this.inspect(k)}: ${this.inspect(v[k])}`);
+    }
+    const body = props.length ? " " + props.join(", ") + " " : "";
+    const head = name === "Object" ? "" : name + " ";
+    return `//js(${head}{${body}})`;
+  }
+  #dict(map3) {
+    let body = "dict.from_list([";
+    let first = true;
+    let key_value_pairs = [];
+    map3.forEach((value, key) => {
+      key_value_pairs.push([key, value]);
+    });
+    key_value_pairs.sort();
+    key_value_pairs.forEach(([key, value]) => {
+      if (!first) body = body + ", ";
+      body = body + "#(" + this.inspect(key) + ", " + this.inspect(value) + ")";
+      first = false;
+    });
+    return body + "])";
+  }
+  #customType(record) {
+    const props = Object.keys(record).map((label) => {
+      const value = this.inspect(record[label]);
+      return isNaN(parseInt(label)) ? `${label}: ${value}` : value;
+    }).join(", ");
+    return props ? `${record.constructor.name}(${props})` : record.constructor.name;
+  }
+  #list(list4) {
+    if (list4 instanceof Empty) {
+      return "[]";
+    }
+    let char_out = 'charlist.from_string("';
+    let list_out = "[";
+    let current = list4;
+    while (current instanceof NonEmpty) {
+      let element4 = current.head;
+      current = current.tail;
+      if (list_out !== "[") {
+        list_out += ", ";
+      }
+      list_out += this.inspect(element4);
+      if (char_out) {
+        if (Number.isInteger(element4) && element4 >= 32 && element4 <= 126) {
+          char_out += String.fromCharCode(element4);
+        } else {
+          char_out = null;
+        }
+      }
+    }
+    if (char_out) {
+      return char_out + '")';
+    } else {
+      return list_out + "]";
+    }
+  }
+  #string(str) {
+    let new_str = '"';
+    for (let i = 0; i < str.length; i++) {
+      const char = str[i];
+      switch (char) {
+        case "\n":
+          new_str += "\\n";
+          break;
+        case "\r":
+          new_str += "\\r";
+          break;
+        case "	":
+          new_str += "\\t";
+          break;
+        case "\f":
+          new_str += "\\f";
+          break;
+        case "\\":
+          new_str += "\\\\";
+          break;
+        case '"':
+          new_str += '\\"';
+          break;
+        default:
+          if (char < " " || char > "~" && char < "\xA0") {
+            new_str += "\\u{" + char.charCodeAt(0).toString(16).toUpperCase().padStart(4, "0") + "}";
+          } else {
+            new_str += char;
+          }
+      }
+    }
+    new_str += '"';
+    return new_str;
+  }
+  #utfCodepoint(codepoint2) {
+    return `//utfcodepoint(${String.fromCodePoint(codepoint2.value)})`;
+  }
+  #bit_array(bits) {
+    if (bits.bitSize === 0) {
+      return "<<>>";
+    }
+    let acc = "<<";
+    for (let i = 0; i < bits.byteSize - 1; i++) {
+      acc += bits.byteAt(i).toString();
+      acc += ", ";
+    }
+    if (bits.byteSize * 8 === bits.bitSize) {
+      acc += bits.byteAt(bits.byteSize - 1).toString();
+    } else {
+      const trailingBitsCount = bits.bitSize % 8;
+      acc += bits.byteAt(bits.byteSize - 1) >> 8 - trailingBitsCount;
+      acc += `:size(${trailingBitsCount})`;
+    }
+    acc += ">>";
+    return acc;
+  }
+};
 
 // build/.lustre/entry.mjs
 main();
