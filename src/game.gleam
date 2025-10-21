@@ -114,7 +114,6 @@ pub fn apply(cmd: Command, state: State) -> State {
       })
       |> list.append({
         list.flat_map(enemy_bullets, fn(bullet) {
-          echo bullet
           let Bullet(position: Position(x:, y:), count_down:, ..) = bullet
           let updated = case count_down == 0 {
             True ->

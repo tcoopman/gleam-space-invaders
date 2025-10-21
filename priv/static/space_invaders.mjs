@@ -257,11 +257,6 @@ function bitArrayByteAt(buffer, bitOffset, index4) {
     return a | b;
   }
 }
-var UtfCodepoint = class {
-  constructor(value) {
-    this.value = value;
-  }
-};
 var isBitArrayDeprecationMessagePrinted = {};
 function bitArrayPrintDeprecationWarning(name, message) {
   if (isBitArrayDeprecationMessagePrinted[name]) {
@@ -6640,7 +6635,7 @@ function apply_state(state, events) {
           "todo",
           FILEPATH3,
           "game",
-          212,
+          211,
           "apply_state",
           "`todo` expression evaluated. This code has not yet been implemented.",
           {}
@@ -6771,7 +6766,6 @@ function apply(cmd, state) {
       flat_map(
         enemy_bullets,
         (bullet) => {
-          echo(bullet, void 0, "src/game.gleam", 117);
           let x;
           let y;
           let count_down;
@@ -6830,209 +6824,6 @@ function apply(cmd, state) {
   let events = _block;
   return apply_state(state, events);
 }
-function echo(value, message, file, line) {
-  const grey = "\x1B[90m";
-  const reset_color = "\x1B[39m";
-  const file_line = `${file}:${line}`;
-  const inspector = new Echo$Inspector();
-  const string_value = inspector.inspect(value);
-  const string_message = message === void 0 ? "" : " " + message;
-  if (globalThis.process?.stderr?.write) {
-    const string5 = `${grey}${file_line}${reset_color}${string_message}
-${string_value}
-`;
-    globalThis.process.stderr.write(string5);
-  } else if (globalThis.Deno) {
-    const string5 = `${grey}${file_line}${reset_color}${string_message}
-${string_value}
-`;
-    globalThis.Deno.stderr.writeSync(new TextEncoder().encode(string5));
-  } else {
-    const string5 = `${file_line}
-${string_value}`;
-    globalThis.console.log(string5);
-  }
-  return value;
-}
-var Echo$Inspector = class {
-  #references = /* @__PURE__ */ new Set();
-  #isDict(value) {
-    try {
-      return value instanceof Dict;
-    } catch {
-      return false;
-    }
-  }
-  #float(float4) {
-    const string5 = float4.toString().replace("+", "");
-    if (string5.indexOf(".") >= 0) {
-      return string5;
-    } else {
-      const index4 = string5.indexOf("e");
-      if (index4 >= 0) {
-        return string5.slice(0, index4) + ".0" + string5.slice(index4);
-      } else {
-        return string5 + ".0";
-      }
-    }
-  }
-  inspect(v) {
-    const t = typeof v;
-    if (v === true) return "True";
-    if (v === false) return "False";
-    if (v === null) return "//js(null)";
-    if (v === void 0) return "Nil";
-    if (t === "string") return this.#string(v);
-    if (t === "bigint" || Number.isInteger(v)) return v.toString();
-    if (t === "number") return this.#float(v);
-    if (v instanceof UtfCodepoint) return this.#utfCodepoint(v);
-    if (v instanceof BitArray) return this.#bit_array(v);
-    if (v instanceof RegExp) return `//js(${v})`;
-    if (v instanceof Date) return `//js(Date("${v.toISOString()}"))`;
-    if (v instanceof globalThis.Error) return `//js(${v.toString()})`;
-    if (v instanceof Function) {
-      const args = [];
-      for (const i of Array(v.length).keys())
-        args.push(String.fromCharCode(i + 97));
-      return `//fn(${args.join(", ")}) { ... }`;
-    }
-    if (this.#references.size === this.#references.add(v).size) {
-      return "//js(circular reference)";
-    }
-    let printed;
-    if (Array.isArray(v)) {
-      printed = `#(${v.map((v2) => this.inspect(v2)).join(", ")})`;
-    } else if (v instanceof List) {
-      printed = this.#list(v);
-    } else if (v instanceof CustomType) {
-      printed = this.#customType(v);
-    } else if (this.#isDict(v)) {
-      printed = this.#dict(v);
-    } else if (v instanceof Set) {
-      return `//js(Set(${[...v].map((v2) => this.inspect(v2)).join(", ")}))`;
-    } else {
-      printed = this.#object(v);
-    }
-    this.#references.delete(v);
-    return printed;
-  }
-  #object(v) {
-    const name = Object.getPrototypeOf(v)?.constructor?.name || "Object";
-    const props = [];
-    for (const k of Object.keys(v)) {
-      props.push(`${this.inspect(k)}: ${this.inspect(v[k])}`);
-    }
-    const body = props.length ? " " + props.join(", ") + " " : "";
-    const head = name === "Object" ? "" : name + " ";
-    return `//js(${head}{${body}})`;
-  }
-  #dict(map3) {
-    let body = "dict.from_list([";
-    let first = true;
-    let key_value_pairs = [];
-    map3.forEach((value, key) => {
-      key_value_pairs.push([key, value]);
-    });
-    key_value_pairs.sort();
-    key_value_pairs.forEach(([key, value]) => {
-      if (!first) body = body + ", ";
-      body = body + "#(" + this.inspect(key) + ", " + this.inspect(value) + ")";
-      first = false;
-    });
-    return body + "])";
-  }
-  #customType(record) {
-    const props = Object.keys(record).map((label) => {
-      const value = this.inspect(record[label]);
-      return isNaN(parseInt(label)) ? `${label}: ${value}` : value;
-    }).join(", ");
-    return props ? `${record.constructor.name}(${props})` : record.constructor.name;
-  }
-  #list(list4) {
-    if (list4 instanceof Empty) {
-      return "[]";
-    }
-    let char_out = 'charlist.from_string("';
-    let list_out = "[";
-    let current = list4;
-    while (current instanceof NonEmpty) {
-      let element4 = current.head;
-      current = current.tail;
-      if (list_out !== "[") {
-        list_out += ", ";
-      }
-      list_out += this.inspect(element4);
-      if (char_out) {
-        if (Number.isInteger(element4) && element4 >= 32 && element4 <= 126) {
-          char_out += String.fromCharCode(element4);
-        } else {
-          char_out = null;
-        }
-      }
-    }
-    if (char_out) {
-      return char_out + '")';
-    } else {
-      return list_out + "]";
-    }
-  }
-  #string(str) {
-    let new_str = '"';
-    for (let i = 0; i < str.length; i++) {
-      const char = str[i];
-      switch (char) {
-        case "\n":
-          new_str += "\\n";
-          break;
-        case "\r":
-          new_str += "\\r";
-          break;
-        case "	":
-          new_str += "\\t";
-          break;
-        case "\f":
-          new_str += "\\f";
-          break;
-        case "\\":
-          new_str += "\\\\";
-          break;
-        case '"':
-          new_str += '\\"';
-          break;
-        default:
-          if (char < " " || char > "~" && char < "\xA0") {
-            new_str += "\\u{" + char.charCodeAt(0).toString(16).toUpperCase().padStart(4, "0") + "}";
-          } else {
-            new_str += char;
-          }
-      }
-    }
-    new_str += '"';
-    return new_str;
-  }
-  #utfCodepoint(codepoint2) {
-    return `//utfcodepoint(${String.fromCodePoint(codepoint2.value)})`;
-  }
-  #bit_array(bits) {
-    if (bits.bitSize === 0) {
-      return "<<>>";
-    }
-    let acc = "<<";
-    for (let i = 0; i < bits.byteSize - 1; i++) {
-      acc += bits.byteAt(i).toString();
-      acc += ", ";
-    }
-    if (bits.byteSize * 8 === bits.bitSize) {
-      acc += bits.byteAt(bits.byteSize - 1).toString();
-    } else {
-      const trailingBitsCount = bits.bitSize % 8;
-      acc += bits.byteAt(bits.byteSize - 1) >> 8 - trailingBitsCount;
-      acc += `:size(${trailingBitsCount})`;
-    }
-    acc += ">>";
-    return acc;
-  }
-};
 
 // build/dev/javascript/space_invaders/space_invaders.mjs
 var FILEPATH4 = "src/space_invaders.gleam";
@@ -7067,15 +6858,15 @@ function update_game(model, cmd) {
       "let_assert",
       FILEPATH4,
       "space_invaders",
-      63,
+      61,
       "update_game",
       "Pattern match failed, no pattern matched the value.",
       {
         value: model,
-        start: 1547,
-        end: 1582,
-        pattern_start: 1558,
-        pattern_end: 1574
+        start: 1523,
+        end: 1558,
+        pattern_start: 1534,
+        pattern_end: 1550
       }
     );
   }
@@ -7112,15 +6903,15 @@ function update2(model, msg) {
       "let_assert",
       FILEPATH4,
       "space_invaders",
-      72,
+      70,
       "update",
       "Pattern match failed, no pattern matched the value.",
       {
         value: model$1,
-        start: 1789,
-        end: 1817,
-        pattern_start: 1800,
-        pattern_end: 1809
+        start: 1765,
+        end: 1793,
+        pattern_start: 1776,
+        pattern_end: 1785
       }
     );
   }
@@ -7142,15 +6933,15 @@ function update2(model, msg) {
         "let_assert",
         FILEPATH4,
         "space_invaders",
-        82,
+        80,
         "update",
         "Pattern match failed, no pattern matched the value.",
         {
           value: model$2,
-          start: 2079,
-          end: 2107,
-          pattern_start: 2090,
-          pattern_end: 2099
+          start: 2055,
+          end: 2083,
+          pattern_start: 2066,
+          pattern_end: 2075
         }
       );
     }
@@ -7186,15 +6977,15 @@ function space_ship(grid_size) {
       "let_assert",
       FILEPATH4,
       "space_invaders",
-      119,
+      117,
       "space_ship",
       "Pattern match failed, no pattern matched the value.",
       {
         value: $,
-        start: 3022,
-        end: 3086,
-        pattern_start: 3033,
-        pattern_end: 3042
+        start: 2998,
+        end: 3062,
+        pattern_start: 3009,
+        pattern_end: 3018
       }
     );
   }
@@ -7364,10 +7155,10 @@ function main() {
       "let_assert",
       FILEPATH4,
       "space_invaders",
-      30,
+      28,
       "main",
       "Pattern match failed, no pattern matched the value.",
-      { value: $, start: 737, end: 792, pattern_start: 748, pattern_end: 759 }
+      { value: $, start: 713, end: 768, pattern_start: 724, pattern_end: 735 }
     );
   }
   addGlobalEventListener(
@@ -7390,15 +7181,15 @@ function main() {
           "let_assert",
           FILEPATH4,
           "space_invaders",
-          37,
+          35,
           "main",
           "Pattern match failed, no pattern matched the value.",
           {
             value: result,
-            start: 983,
-            end: 1012,
-            pattern_start: 994,
-            pattern_end: 1003
+            start: 959,
+            end: 988,
+            pattern_start: 970,
+            pattern_end: 979
           }
         );
       }
